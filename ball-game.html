@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공 피하기 게임</title>
+    <link rel="stylesheet" href="css/ball-game.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <div class="header-content">
+                <a href="index.html" class="back-btn">← 게임 선택</a>
+                <h1>공 피하기 게임</h1>
+            </div>
+            <div class="score-board">
+                <span>점수: <span id="score">0</span></span>
+                <span>최고점수: <span id="highScore">0</span></span>
+            </div>
+        </header>
+
+        <main class="game-main">
+            <div id="gameCanvas" class="game-canvas">
+                <!-- 게임이 여기에 렌더링됩니다 -->
+            </div>
+
+            <div id="gameOverScreen" class="game-over hidden">
+                <h2>게임 오버!</h2>
+                <p>최종 점수: <span id="finalScore">0</span></p>
+                <button id="restartBtn" class="btn">다시 시작</button>
+            </div>
+        </main>
+
+        <footer class="game-controls">
+            <button id="startBtn" class="btn btn-primary">게임 시작</button>
+            <button id="pauseBtn" class="btn hidden">일시정지</button>
+            <div class="instructions">
+                <p>조작법: 마우스를 움직여서 플레이어를 조종하세요</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>

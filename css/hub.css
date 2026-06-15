@@ -1,0 +1,464 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.hub-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.hub-header {
+    text-align: center;
+    color: white;
+    padding: 40px 20px;
+    margin-bottom: 40px;
+}
+
+.hub-header h1 {
+    font-size: 3.5rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.hub-header p {
+    font-size: 1.3rem;
+    opacity: 0.95;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    padding: 0 20px;
+    margin-bottom: 60px;
+}
+
+.game-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    transition: all 0.4s ease;
+    cursor: pointer;
+}
+
+.game-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.game-card.coming-soon {
+    opacity: 0.7;
+}
+
+.game-card.coming-soon:hover {
+    transform: translateY(-5px);
+}
+
+.game-card-inner {
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.game-icon {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+}
+
+/* 공 피하기 게임 아이콘 */
+.game-icon.ball-game {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    animation: rotate 20s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.icon-circle {
+    position: absolute;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.icon-circle.player-color {
+    width: 40px;
+    height: 40px;
+    background: white;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.icon-circle.enemy-color {
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    top: 20%;
+    right: 20%;
+}
+
+.icon-circle.collectible-color {
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    bottom: 20%;
+    left: 20%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.3);
+    }
+}
+
+/* 테트리스 게임 아이콘 */
+.game-icon.tetris-game {
+    background: linear-gradient(135deg, #8a2be2 0%, #4b0082 100%);
+    animation: tetrisPulse 3s ease-in-out infinite;
+}
+
+@keyframes tetrisPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.tetris-blocks {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.tetris-block {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-radius: 2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.tetris-block.block-1 {
+    background: #00f5ff;
+    top: 20%;
+    left: 35%;
+    animation: tetrisFloat1 4s ease-in-out infinite;
+}
+
+.tetris-block.block-2 {
+    background: #ffff00;
+    top: 40%;
+    right: 25%;
+    animation: tetrisFloat2 4s ease-in-out infinite 1s;
+}
+
+.tetris-block.block-3 {
+    background: #00ff00;
+    bottom: 35%;
+    left: 25%;
+    animation: tetrisFloat3 4s ease-in-out infinite 2s;
+}
+
+.tetris-block.block-4 {
+    background: #ff0000;
+    bottom: 20%;
+    right: 35%;
+    animation: tetrisFloat4 4s ease-in-out infinite 3s;
+}
+
+@keyframes tetrisFloat1 {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(90deg); }
+}
+
+@keyframes tetrisFloat2 {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(8px) rotate(-90deg); }
+}
+
+@keyframes tetrisFloat3 {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    50% { transform: translateX(-8px) rotate(180deg); }
+}
+
+@keyframes tetrisFloat4 {
+    0%, 100% { transform: translateX(0) rotate(0deg); }
+    50% { transform: translateX(8px) rotate(-180deg); }
+}
+
+/* 사다리 게임 아이콘 */
+.game-icon.ladder-game {
+    background: linear-gradient(135deg, #4ecdc4 0%, #009688 100%);
+    animation: ladderGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes ladderGlow {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(78, 205, 196, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 40px rgba(78, 205, 196, 0.6);
+    }
+}
+
+.ladder-icon {
+    position: relative;
+    width: 80%;
+    height: 80%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ladder-line {
+    background: white;
+    border-radius: 2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.ladder-line.vertical {
+    width: 4px;
+    height: 70%;
+    animation: ladderBounce 3s ease-in-out infinite;
+}
+
+.ladder-line.vertical:nth-child(2) {
+    animation-delay: 0.5s;
+}
+
+.ladder-line.vertical:nth-child(3) {
+    animation-delay: 1s;
+}
+
+.ladder-line.horizontal {
+    position: absolute;
+    width: 50%;
+    height: 3px;
+    left: 25%;
+    animation: ladderSlide 2s ease-in-out infinite;
+}
+
+.ladder-line.horizontal:nth-child(4) {
+    top: 30%;
+}
+
+.ladder-line.horizontal:nth-child(5) {
+    bottom: 30%;
+    animation-delay: 1s;
+}
+
+@keyframes ladderBounce {
+    0%, 100% {
+        transform: scaleY(1);
+    }
+    50% {
+        transform: scaleY(1.1);
+    }
+}
+
+@keyframes ladderSlide {
+    0%, 100% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scaleX(1.2);
+    }
+}
+
+/* 준비 중 게임 아이콘 */
+.game-icon.placeholder-game {
+    background: linear-gradient(135deg, #a8a8a8 0%, #888888 100%);
+}
+
+.placeholder-text {
+    font-size: 4rem;
+    color: white;
+    font-weight: bold;
+}
+
+.game-icon.praise-game {
+    background: linear-gradient(135deg, #ff9a9e 0%, #c9b8e8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.praise-icon {
+    font-size: 4rem;
+}
+
+.game-icon.neon-breaker-game {
+    background: linear-gradient(135deg, #0a0516 0%, #3d0070 50%, #0a0516 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 20px rgba(157, 0, 255, 0.4);
+}
+
+.neon-breaker-icon {
+    font-size: 4rem;
+    filter: drop-shadow(0 0 8px #ff007f) drop-shadow(0 0 16px #9d00ff);
+}
+
+.game-card h2 {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.game-description {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    min-height: 50px;
+}
+
+.game-stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.stat {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.game-card.coming-soon .stat {
+    background: linear-gradient(135deg, #a8a8a8 0%, #888888 100%);
+}
+
+.play-btn {
+    display: inline-block;
+    padding: 14px 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-decoration: none;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.play-btn:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+    transform: scale(1.05);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.play-btn.disabled {
+    background: linear-gradient(135deg, #a8a8a8 0%, #888888 100%);
+    cursor: not-allowed;
+}
+
+.play-btn.disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.hub-footer {
+    text-align: center;
+    color: white;
+    padding: 30px 20px;
+    opacity: 0.9;
+}
+
+.hub-footer p {
+    font-size: 0.95rem;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .hub-header h1 {
+        font-size: 2.5rem;
+    }
+
+    .hub-header p {
+        font-size: 1.1rem;
+    }
+
+    .games-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .game-card h2 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .hub-header h1 {
+        font-size: 2rem;
+    }
+
+    .hub-header p {
+        font-size: 1rem;
+    }
+
+    .game-icon {
+        width: 100px;
+        height: 100px;
+    }
+
+    .icon-circle.player-color {
+        width: 30px;
+        height: 30px;
+    }
+
+    .icon-circle.enemy-color {
+        width: 24px;
+        height: 24px;
+    }
+
+    .icon-circle.collectible-color {
+        width: 16px;
+        height: 16px;
+    }
+}

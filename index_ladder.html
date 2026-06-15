@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사다리 게임</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --container-bg: #ffffff;
+      --text-color: #333333;
+      --primary: #4ecdc4;
+      --primary-dark: #009688;
+      --accent: #8bc34a;
+      --error-bg: #ffcdd2;
+      --error-text: #c62828;
+      --font: 'Noto Sans KR', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .game-container {
+      background: var(--container-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      max-width: 800px;
+      width: 100%;
+    }
+    h1 {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: var(--primary-dark);
+    }
+    .input-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      transition: border-color 0.2s;
+    }
+    .input-group input:focus {
+      border-color: var(--primary-dark);
+      outline: none;
+      box-shadow: 0 0 5px rgba(0, 150, 136, 0.3);
+    }
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    button {
+      flex: 1 1 120px;
+      padding: 0.75rem 1rem;
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      background: #dddddd;
+      color: #aaaaaa;
+      cursor: not-allowed;
+      transform: none;
+    }
+    canvas {
+      width: 100%;
+      height: 350px;
+      background: #fafafa;
+      border: 1px solid #dddddd;
+      border-radius: 4px;
+      margin: 1.5rem 0;
+      display: block;
+    }
+    .results-section {
+      margin-top: 2rem;
+    }
+    .results-section h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--primary-dark);
+    }
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: #e8f5e9;
+      border-left: 4px solid var(--accent);
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+    }
+    .message-box {
+      padding: 0.75rem 1rem;
+      background: var(--error-bg);
+      color: var(--error-text);
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .message-box.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>✨ 사다리 게임 ✨</h1>
+    <div class="message-box" id="messageBox"></div>
+    <div class="input-section" id="playerInputs"></div>
+    <div class="input-section" id="outcomeInputs"></div>
+    <div class="button-group">
+      <button id="addPlayerBtn">참가자 추가</button>
+      <button id="removePlayerBtn">참가자 제거</button>
+      <button id="addOutcomeBtn">결과 추가</button>
+      <button id="removeOutcomeBtn">결과 제거</button>
+    </div>
+    <div class="button-group">
+      <button id="startGameBtn">게임 시작</button>
+      <button id="resetGameBtn">초기화</button>
+    </div>
+    <canvas id="ladderCanvas"></canvas>
+    <div class="results-section" id="resultsSection" style="display:none;">
+      <h2>⭐ 게임 결과 ⭐</h2>
+      <div id="resultsList"></div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('ladderCanvas');
+    const ctx = canvas.getContext('2d');
+    const playerInputsDiv = document.getElementById('playerInputs');
+    const outcomeInputsDiv = document.getElementById('outcomeInputs');
+    const addPlayerBtn = document.getElementById('addPlayerBtn');
+    const removePlayerBtn = document.getElementById('removePlayerBtn');
+    const addOutcomeBtn = document.getElementById('addOutcomeBtn');
+    const removeOutcomeBtn = document.getElementById('removeOutcomeBtn');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const resetGameBtn = document.getElementById('resetGameBtn');
+    const resultsSection = document.getElementById('resultsSection');
+    const resultsList = document.getElementById('resultsList');
+    const messageBox = document.getElementById('messageBox');
+
+    let numPlayers = 5;
+    let numOutcomes = 5;
+    let ladderRungs = [];
+    let ladderGenerated = false;
+    let animationId = null;
+
+    function showMessage(message, type = 'error') {
+      messageBox.textContent = message;
+      messageBox.className = `message-box show ${type}`;
+      clearTimeout(messageBox.hideTimeout);
+      messageBox.hideTimeout = setTimeout(() => messageBox.classList.remove('show'), 3000);
+    }
+
+    function updatePlayerInputs() {
+      playerInputsDiv.innerHTML = '';
+      for (let i = 0; i < numPlayers; i++) {
+        const wrapper = document.createElement('div'); wrapper.className = 'input-group';
+        wrapper.innerHTML = `<label for=\`player${i+1}\`>참가자 ${i+1}</label>` +
+                             `<input type=\"text\" id=\"player${i+1}\" value=\"참가자 ${i+1}\" />`;
+        playerInputsDiv.appendChild(wrapper);
+      }
+    }
+
+    function updateOutcomeInputs() {
+      outcomeInputsDiv.innerHTML = '';
+      for (let i = 0; i < numOutcomes; i++) {
+        const wrapper = document.createElement('div'); wrapper.className = 'input-group';
+        wrapper.innerHTML = `<label for=\`outcome${i+1}\`>발표순서 ${i+1}</label>` +
+                             `<input type=\"text\" id=\"outcome${i+1}\" value=\"발표순서 ${i+1}\" />`;
+        outcomeInputsDiv.appendChild(wrapper);
+      }
+    }
+
+  // 사다리 구조 생성 함수 (열마다 최소 1개 발판 보장)
+  function generateLadder() {
+    ladderRungs = [];
+    const usedRows = new Set();
+    const gapX  = canvas.width  / (numPlayers + 1);
+    const stepY = canvas.height / (numPlayers * 2);
+
+    // 1) 랜덤 발판 생성
+    for (let c = 0; c < numPlayers - 1; c++) {
+      for (let r = 0; r < numPlayers * 2 - 1; r++) {
+        if (Math.random() < 0.4 && !usedRows.has(r)) {
+          usedRows.add(r);
+          ladderRungs.push({
+            startX:   gapX * (c + 1),
+            endX:     gapX * (c + 2),
+            y:        stepY * (r + 1),
+            startCol: c,
+            endCol:   c + 1
+          });
+        }
+      }
+    }
+
+    // 2) 열마다 최소 1개 발판 보장
+    for (let c = 0; c < numPlayers - 1; c++) {
+      if (!ladderRungs.some(r => r.startCol === c)) {
+        // 해당 열에 발판이 하나도 없다면 랜덤 행 하나 추가
+        const r = Math.floor(Math.random() * (numPlayers * 2 - 1));
+        ladderRungs.push({
+          startX:   gapX * (c + 1),
+          endX:     gapX * (c + 2),
+          y:        stepY * (r + 1),
+          startCol: c,
+          endCol:   c + 1
+        });
+      }
+    }
+
+    ladderGenerated = true;
+  }
+
+    function drawStaticLadder() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const gapX = canvas.width/(numPlayers+1);
+      ctx.lineWidth=2; ctx.strokeStyle='#607d8b';
+      for(let i=0;i<numPlayers;i++){ctx.beginPath();ctx.moveTo(gapX*(i+1),0);ctx.lineTo(gapX*(i+1),canvas.height);ctx.stroke();}
+      ladderRungs.forEach(r=>{ctx.beginPath();ctx.moveTo(r.startX,r.y);ctx.lineTo(r.endX,r.y);ctx.stroke();});
+    }
+
+    function getPlayerPaths() {
+      const gapX=canvas.width/(numPlayers+1),stepY=canvas.height/(numPlayers*2);
+      const paths=[];
+      for(let i=0;i<numPlayers;i++){
+        let x=gapX*(i+1),y=0,col=i; const path=[{x,y}];
+        while(y+stepY<canvas.height){
+          const rung=ladderRungs.find(r=>Math.abs(r.y-y)<0.1&&(r.startCol===col||r.endCol===col));
+          if(rung){col=rung.startCol===col?rung.endCol:rung.startCol; x=gapX*(col+1); path.push({x,y});}
+          y+=stepY; path.push({x,y});
+        }
+        if(path[path.length-1].y!==canvas.height)path.push({x,y:canvas.height}); paths.push(path);
+      }
+      return paths;
+    }
+
+    function drawBall(x,y,idx){ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);const cols=['#ef5350','#ab47bc','#42a5f5','#66bb6a','#ffee58','#ff7043'];ctx.fillStyle=cols[idx%cols.length];ctx.fill();ctx.strokeStyle='#263238';ctx.lineWidth=1;ctx.stroke();}
+
+    function animatePaths(paths){cancelAnimationFrame(animationId);const pos=paths.map(p=>({x:p[0].x,y:p[0].y}));const idxArr=Array(numPlayers).fill(0);const speed=5;resultsList.innerHTML='';resultsSection.style.display='none';[startGameBtn,resetGameBtn,addPlayerBtn,removePlayerBtn,addOutcomeBtn,removeOutcomeBtn].forEach(b=>b.disabled=true);(function step(){drawStaticLadder();let done=true;pos.forEach((p,i)=>{const path=paths[i];if(idxArr[i]<path.length-1){done=false;const next=path[idxArr[i]+1];const dx=next.x-p.x,dy=next.y-p.y,dist=Math.hypot(dx,dy);if(dist<speed){p.x=next.x;p.y=next.y;idxArr[i]++;}else{p.x+=dx/dist*speed;p.y+=dy/dist*speed;}}drawBall(p.x,p.y,i);});if(!done)animationId=requestAnimationFrame(step);else{displayResults(paths);[startGameBtn,resetGameBtn,addPlayerBtn,removePlayerBtn,addOutcomeBtn,removeOutcomeBtn].forEach(b=>b.disabled=false);}})();}
+
+    function displayResults(paths){resultsList.innerHTML='';resultsSection.style.display='block';const names=Array.from(playerInputsDiv.querySelectorAll('input')).map(i=>i.value);const outs=Array.from(outcomeInputsDiv.querySelectorAll('input')).map(i=>i.value);const gapX=canvas.width/(numPlayers+1);names.forEach((n,i)=>{const finalX=paths[i][paths[i].length-1].x;let idx=Math.round(finalX/gapX)-1;idx=Math.max(0,Math.min(idx,outs.length-1));const d=document.createElement('div');d.className='result-item';d.innerHTML=`<span><strong>${n}</strong></span><span>→ ${outs[idx]}</span>`;resultsList.appendChild(d);});}
+
+    addPlayerBtn.addEventListener('click',()=>{if(numPlayers<8){numPlayers++;updatePlayerInputs();generateLadder();drawStaticLadder();showMessage('참가자 추가');}else showMessage('최대 8명');});
+    removePlayerBtn.addEventListener('click',()=>{if(numPlayers>2){numPlayers--;updatePlayerInputs();generateLadder();drawStaticLadder();showMessage('참가자 제거');}else showMessage('최소 2명');});
+    addOutcomeBtn.addEventListener('click',()=>{if(numOutcomes<8){numOutcomes++;updateOutcomeInputs();generateLadder();drawStaticLadder();showMessage('결과 추가');}else showMessage('최대 8개');});
+    removeOutcomeBtn.addEventListener('click',()=>{if(numOutcomes>2){numOutcomes--;updateOutcomeInputs();generateLadder();drawStaticLadder();showMessage('결과 제거');}else showMessage('최소 2개');});
+
+    startGameBtn.addEventListener('click',()=>{const pns=Array.from(playerInputsDiv.querySelectorAll('input')).map(i=>i.value.trim());const ons=Array.from(outcomeInputsDiv.querySelectorAll('input')).map(i=>i.value.trim());if(pns.some(n=>!n)||ons.some(o=>!o)){showMessage('값 입력');return;}if(numPlayers!==numOutcomes){showMessage('수 불일치');return;}if(!ladderGenerated)generateLadder();animatePaths(getPlayerPaths());});
+
+    resetGameBtn.addEventListener('click',()=>{cancelAnimationFrame(animationId);numPlayers=numOutcomes=3;updatePlayerInputs();updateOutcomeInputs();generateLadder();drawStaticLadder();resultsSection.style.display='none';});
+
+    window.onload=()=>{canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;updatePlayerInputs();updateOutcomeInputs();generateLadder();drawStaticLadder();};
+    window.addEventListener('resize',()=>{canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;generateLadder();drawStaticLadder();resultsSection.style.display='none';});
+  </script>
+</body>
+</html>

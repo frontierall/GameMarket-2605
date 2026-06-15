@@ -1,0 +1,345 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.game-container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 900px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.game-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 30px;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.back-btn {
+    color: white;
+    text-decoration: none;
+    font-size: 1rem;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateX(-3px);
+}
+
+.game-header h1 {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.score-board {
+    display: flex;
+    gap: 20px;
+    font-size: 1.1rem;
+    flex-wrap: wrap;
+}
+
+.score-board span {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.game-main {
+    padding: 30px;
+    background: #f8f9fa;
+}
+
+.game-area {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.board-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#gameBoard {
+    border: 3px solid #333;
+    border-radius: 10px;
+    background: #000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.game-over, .pause-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    backdrop-filter: blur(5px);
+    border-radius: 10px;
+}
+
+.game-over h2, .pause-screen h2 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.game-over p, .pause-screen p {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    min-width: 200px;
+}
+
+.next-piece {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.next-piece h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+#nextPieceCanvas {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: #000;
+}
+
+.game-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn {
+    padding: 12px 24px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    background: #6c757d;
+    color: white;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+}
+
+.instructions {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.instructions h4 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.instruction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.key {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* 테트리스 블록 색상 (CSS 변수로 정의) */
+:root {
+    --tetris-i: #00f5ff;  /* I-piece (cyan) */
+    --tetris-o: #ffff00;  /* O-piece (yellow) */
+    --tetris-t: #8a2be2;  /* T-piece (purple) */
+    --tetris-s: #00ff00;  /* S-piece (green) */
+    --tetris-z: #ff0000;  /* Z-piece (red) */
+    --tetris-j: #0000ff;  /* J-piece (blue) */
+    --tetris-l: #ffa500;  /* L-piece (orange) */
+    --tetris-ghost: rgba(255, 255, 255, 0.3); /* 유령 블록 */
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .game-area {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .side-panel {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        min-width: auto;
+        width: 100%;
+    }
+
+    .next-piece, .instructions {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .game-controls {
+        flex-direction: row;
+        justify-content: center;
+        width: 100%;
+    }
+
+    #gameBoard {
+        width: 280px;
+        height: 560px;
+    }
+
+    .score-board {
+        justify-content: center;
+    }
+
+    .game-header h1 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .game-main {
+        padding: 20px;
+    }
+
+    #gameBoard {
+        width: 240px;
+        height: 480px;
+    }
+
+    #nextPieceCanvas {
+        width: 100px;
+        height: 100px;
+    }
+
+    .side-panel {
+        gap: 15px;
+    }
+
+    .next-piece, .instructions {
+        padding: 15px;
+    }
+
+    .game-over h2, .pause-screen h2 {
+        font-size: 2rem;
+    }
+
+    .score-board {
+        font-size: 0.9rem;
+        gap: 10px;
+    }
+
+    .score-board span {
+        padding: 6px 12px;
+    }
+}
+
+/* 애니메이션 효과 */
+@keyframes lineFlash {
+    0%, 50%, 100% {
+        background-color: white;
+    }
+    25%, 75% {
+        background-color: yellow;
+    }
+}
+
+.line-clear {
+    animation: lineFlash 0.5s ease-in-out;
+}
+
+@keyframes dropAnimation {
+    0% {
+        transform: translateY(-10px);
+        opacity: 0.7;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.piece-drop {
+    animation: dropAnimation 0.2s ease-out;
+}

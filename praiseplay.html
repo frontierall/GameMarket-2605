@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>칭찬 주고받기 게임 🌸</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --pink:#ff9a9e;--pink-s:#fad0c4;
+  --mint:#98e8e0;--mint-s:#cff5f0;--mint-d:#5fd3be;
+  --yellow:#ffeaa7;--yellow-d:#fdcb6e;
+  --purple:#c9b8e8;--purple-d:#9b59b6;
+  --text:#4a3860;--text-s:#9986b3;
+  --r-lg:20px;--r-sm:12px;
+  --sh:0 4px 24px rgba(100,70,140,.10);
+  --sh-lg:0 8px 40px rgba(100,70,140,.18);
+}
+
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+  background:linear-gradient(135deg,#ffecd2 0%,#fcb69f 25%,#a8edea 65%,#d4b8e8 100%);
+  background-size:200% 200%;
+  animation:bgShift 12s ease infinite alternate;
+  min-height:100vh;color:var(--text);overflow-x:hidden;
+}
+@keyframes bgShift{0%{background-position:0 50%}100%{background-position:100% 50%}}
+
+/* ── Setup ── */
+#setup{
+  position:fixed;inset:0;z-index:100;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(255,245,255,.88);backdrop-filter:blur(12px);
+}
+.setup-card{
+  background:#fff;border-radius:28px;padding:44px 40px;
+  width:92%;max-width:380px;box-shadow:var(--sh-lg);text-align:center;
+}
+.s-emoji{font-size:3rem;display:block;margin-bottom:10px}
+.s-title{
+  font-size:1.7rem;font-weight:800;margin-bottom:5px;
+  background:linear-gradient(135deg,#e84393,var(--purple-d));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.s-sub{color:var(--text-s);font-size:.88rem;margin-bottom:28px}
+.field{margin-bottom:13px;text-align:left}
+.field label{display:block;font-size:.76rem;font-weight:700;color:var(--text-s);
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.field input{
+  width:100%;padding:11px 15px;border:2px solid #ede0f8;
+  border-radius:var(--r-sm);font-size:1rem;font-family:inherit;outline:none;transition:border-color .2s;
+}
+.field input:focus{border-color:var(--pink)}
+.btn-start{
+  margin-top:18px;width:100%;padding:13px;
+  background:linear-gradient(135deg,var(--pink),var(--purple-d));
+  color:#fff;border:none;border-radius:50px;
+  font-size:1rem;font-weight:700;font-family:inherit;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;
+}
+.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,90,180,.35)}
+
+/* ── App ── */
+#app{max-width:880px;margin:0 auto;padding:16px 16px 36px}
+
+.app-header{text-align:center;padding:18px 0 14px}
+.app-title{
+  font-size:1.6rem;font-weight:800;
+  background:linear-gradient(135deg,#e84393,var(--purple-d));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.app-desc{color:var(--text-s);font-size:.85rem;margin-top:3px}
+.btn-reset{
+  margin-top:8px;background:rgba(255,255,255,.5);
+  border:1.5px solid rgba(150,100,200,.25);color:var(--text-s);
+  padding:5px 13px;border-radius:20px;font-size:.76rem;
+  cursor:pointer;font-family:inherit;transition:background .2s;
+}
+.btn-reset:hover{background:rgba(255,255,255,.75)}
+
+/* ── Players grid ── */
+.players-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:14px}
+@media(max-width:560px){.players-grid{grid-template-columns:1fr}}
+
+/* ── Player panel ── */
+.player-panel{
+  background:rgba(255,255,255,.82);backdrop-filter:blur(10px);
+  border-radius:var(--r-lg);padding:17px 15px;
+  box-shadow:var(--sh);border:2px solid transparent;
+  transition:border-color .35s,box-shadow .35s;
+}
+.player-panel.active{border-color:var(--pink);box-shadow:0 4px 28px rgba(255,154,158,.30)}
+.p1.active{border-color:var(--mint-d);box-shadow:0 4px 28px rgba(95,211,190,.28)}
+
+.p-head{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.p-avatar{
+  width:45px;height:45px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.35rem;
+}
+.p0 .p-avatar{background:linear-gradient(135deg,var(--pink),var(--pink-s))}
+.p1 .p-avatar{background:linear-gradient(135deg,var(--mint),var(--mint-s))}
+.p-info{flex:1;min-width:0}
+.p-name{font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-level{font-size:.76rem;color:var(--text-s);margin-top:2px}
+.turn-badge{
+  background:linear-gradient(135deg,var(--pink),var(--purple-d));
+  color:#fff;padding:3px 8px;border-radius:20px;
+  font-size:.7rem;font-weight:700;white-space:nowrap;display:none;
+}
+.active .turn-badge{display:block}
+
+.p-pts{
+  background:linear-gradient(135deg,var(--yellow),var(--yellow-d));
+  border-radius:var(--r-sm);padding:10px 13px;
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;
+}
+.p1 .p-pts{background:linear-gradient(135deg,var(--mint-s),#8adecd)}
+.p-pts-lbl{font-size:.76rem;font-weight:700;color:#6b4b00}
+.p1 .p-pts-lbl{color:#1a5a50}
+.p-pts-val{font-size:1.25rem;font-weight:800;color:#4a3200}
+.p1 .p-pts-val{color:#0a3830}
+
+.prog-wrap{margin-bottom:11px}
+.prog-meta{display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-s);margin-bottom:3px}
+.prog-bar{height:5px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden}
+.prog-fill{
+  height:100%;background:linear-gradient(90deg,var(--pink),var(--purple-d));
+  border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1);
+}
+.p1 .prog-fill{background:linear-gradient(90deg,var(--mint),var(--mint-d))}
+
+.ib-lbl{font-size:.76rem;font-weight:700;color:var(--text-s);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+.ib-list{max-height:165px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.ib-list::-webkit-scrollbar{width:3px}
+.ib-list::-webkit-scrollbar-thumb{background:#e0d0f0;border-radius:99px}
+.ib-empty{text-align:center;color:var(--text-s);font-size:.8rem;padding:12px 6px;opacity:.7}
+.ib-item{
+  background:rgba(255,255,255,.9);border-radius:9px;padding:8px 10px;
+  font-size:.82rem;line-height:1.5;border-left:3px solid var(--pink);
+  animation:slideIn .4s ease-out both;
+}
+.p1 .ib-item{border-left-color:var(--mint-d)}
+.ib-from{font-size:.68rem;color:var(--text-s);margin-top:3px}
+@keyframes slideIn{from{transform:translateX(14px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── Card area ── */
+.card-area{
+  background:rgba(255,255,255,.84);backdrop-filter:blur(10px);
+  border-radius:var(--r-lg);padding:22px 18px 26px;
+  box-shadow:var(--sh);text-align:center;
+}
+.ca-title{font-size:.93rem;font-weight:700;margin-bottom:3px}
+.ca-sub{font-size:.81rem;color:var(--text-s);margin-bottom:20px}
+
+.card-wrap{perspective:900px;height:148px;margin-bottom:20px}
+.praise-card{
+  width:100%;max-width:300px;height:148px;margin:0 auto;
+  position:relative;transform-style:preserve-3d;
+  transition:transform .65s cubic-bezier(.4,0,.2,1);
+}
+.praise-card.flipped{transform:rotateY(180deg)}
+
+.c-face{
+  position:absolute;inset:0;border-radius:15px;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.c-back{background:linear-gradient(135deg,#d4b8e8,#ff9a9e);cursor:pointer}
+.c-back:hover{filter:brightness(1.05)}
+.c-back-inner{text-align:center;color:#fff}
+.c-back-icon{font-size:2.4rem;display:block;margin-bottom:5px}
+.c-back-txt{font-size:.83rem;font-weight:600;opacity:.9;line-height:1.4}
+.c-front{
+  background:linear-gradient(135deg,#ffecd2,#fcb69f);
+  transform:rotateY(180deg);position:relative;overflow:hidden;
+}
+.cv-1 .c-front{background:linear-gradient(135deg,#a8f0ea,#d4f8d0)}
+.cv-2 .c-front{background:linear-gradient(135deg,#ffeaa7,#fde0a0)}
+.cv-3 .c-front{background:linear-gradient(135deg,#e8c8f8,#f8c8e8)}
+.cv-4 .c-front{background:linear-gradient(135deg,#b8e0ff,#d0e8ff)}
+.c-deco{position:absolute;font-size:1.8rem;opacity:.15;pointer-events:none}
+.c-deco.tl{top:7px;left:9px}
+.c-deco.br{bottom:7px;right:9px}
+.c-text{font-size:1.02rem;font-weight:700;color:var(--text);text-align:center;line-height:1.55;z-index:1}
+
+/* ── Buttons ── */
+.btn-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{
+  padding:12px 34px;border:none;border-radius:50px;color:#fff;
+  font-size:.93rem;font-weight:700;font-family:inherit;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;letter-spacing:.02em;
+}
+.btn:hover{transform:translateY(-3px)}
+.btn:active{transform:translateY(-1px)}
+.btn-draw{background:linear-gradient(135deg,var(--purple),var(--purple-d))}
+.btn-draw:hover{box-shadow:0 8px 24px rgba(155,89,182,.35)}
+.btn-send{background:linear-gradient(135deg,var(--pink),#e84393);display:none}
+.btn-send:hover{box-shadow:0 8px 24px rgba(232,67,147,.35)}
+
+/* ── Particles ── */
+.particle{
+  position:fixed;pointer-events:none;z-index:500;font-size:1.2rem;line-height:1;
+  animation:pfly var(--dur,.9s) ease-out var(--delay,0s) forwards;
+}
+@keyframes pfly{
+  0%{transform:translate(0,0) scale(1);opacity:1}
+  100%{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}
+}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:22px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:linear-gradient(135deg,#4a3064,var(--purple));
+  color:#fff;padding:10px 20px;border-radius:50px;
+  font-size:.86rem;font-weight:600;white-space:nowrap;
+  z-index:400;transition:transform .4s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 4px 20px rgba(0,0,0,.15);
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── Level-up overlay ── */
+.levelup-overlay{
+  position:fixed;inset:0;z-index:300;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,230,255,.8);backdrop-filter:blur(8px);
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.levelup-overlay.show{opacity:1;pointer-events:auto}
+.lu-card{
+  background:#fff;border-radius:24px;padding:34px 40px;text-align:center;
+  box-shadow:var(--sh-lg);animation:popIn .5s cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.lu-emoji{font-size:3.5rem;display:block;margin-bottom:9px}
+.lu-title{font-size:1.45rem;font-weight:800;color:var(--text)}
+.lu-sub{font-size:.9rem;color:var(--text-s);margin-top:5px}
+.lu-hint{margin-top:14px;font-size:.74rem;color:#c0b0d0}
+</style>
+</head>
+<body>
+
+<!-- Setup -->
+<div id="setup">
+  <div class="setup-card">
+    <span class="s-emoji">🌸</span>
+    <div class="s-title">칭찬 주고받기</div>
+    <div class="s-sub">따뜻한 칭찬을 나눠봐요!</div>
+    <div class="field">
+      <label>플레이어 1 이름</label>
+      <input id="n1" type="text" placeholder="이름을 입력하세요" maxlength="10" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>플레이어 2 이름</label>
+      <input id="n2" type="text" placeholder="이름을 입력하세요" maxlength="10" autocomplete="off">
+    </div>
+    <button class="btn-start" onclick="startGame()">게임 시작하기 ✨</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="app-header">
+    <div class="app-title">🌸 칭찬 주고받기 게임</div>
+    <div class="app-desc">칭찬은 고래도 춤추게 해요!</div>
+    <div><button class="btn-reset" onclick="confirmReset()">🔄 새 게임</button></div>
+  </div>
+
+  <div class="players-grid">
+    <!-- P0 -->
+    <div class="player-panel p0" id="pp0">
+      <div class="p-head">
+        <div class="p-avatar">🌸</div>
+        <div class="p-info">
+          <div class="p-name" id="pn0">플레이어 1</div>
+          <div class="p-level" id="pl0">🌱 칭찬 새싹</div>
+        </div>
+        <div class="turn-badge">현재 턴</div>
+      </div>
+      <div class="p-pts">
+        <span class="p-pts-lbl">포인트</span>
+        <span class="p-pts-val" id="pts0">0 ⭐</span>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-meta"><span id="pm0">칭찬 고수까지</span><span id="ppc0">0 / 50</span></div>
+        <div class="prog-bar"><div class="prog-fill" id="pf0" style="width:0%"></div></div>
+      </div>
+      <div class="ib-lbl">📬 받은 칭찬</div>
+      <div class="ib-list" id="ib0"><div class="ib-empty">아직 받은 칭찬이 없어요...</div></div>
+    </div>
+
+    <!-- P1 -->
+    <div class="player-panel p1" id="pp1">
+      <div class="p-head">
+        <div class="p-avatar">🌿</div>
+        <div class="p-info">
+          <div class="p-name" id="pn1">플레이어 2</div>
+          <div class="p-level" id="pl1">🌱 칭찬 새싹</div>
+        </div>
+        <div class="turn-badge">현재 턴</div>
+      </div>
+      <div class="p-pts">
+        <span class="p-pts-lbl">포인트</span>
+        <span class="p-pts-val" id="pts1">0 ⭐</span>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-meta"><span id="pm1">칭찬 고수까지</span><span id="ppc1">0 / 50</span></div>
+        <div class="prog-bar"><div class="prog-fill" id="pf1" style="width:0%"></div></div>
+      </div>
+      <div class="ib-lbl">📬 받은 칭찬</div>
+      <div class="ib-list" id="ib1"><div class="ib-empty">아직 받은 칭찬이 없어요...</div></div>
+    </div>
+  </div>
+
+  <!-- Card area -->
+  <div class="card-area">
+    <div class="ca-title" id="turn-txt">✨ 의 차례예요</div>
+    <div class="ca-sub">카드를 뽑아 상대방에게 칭찬을 보내보세요!</div>
+    <div class="card-wrap">
+      <div class="praise-card" id="card">
+        <div class="c-face c-back" onclick="drawCard()">
+          <div class="c-back-inner">
+            <span class="c-back-icon">🎴</span>
+            <div class="c-back-txt">클릭해서<br>칭찬 카드 뽑기</div>
+          </div>
+        </div>
+        <div class="c-face c-front">
+          <span class="c-deco tl">✨</span>
+          <div class="c-text" id="card-txt"></div>
+          <span class="c-deco br">💖</span>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-draw" id="bDraw" onclick="drawCard()">🎴 카드 뽑기</button>
+      <button class="btn btn-send" id="bSend" onclick="sendPraise()">💌 칭찬 보내기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Level-up overlay -->
+<div class="levelup-overlay" id="luOverlay" onclick="closeLevelup()">
+  <div class="lu-card" onclick="event.stopPropagation()">
+    <span class="lu-emoji" id="luEmoji">⭐</span>
+    <div class="lu-title" id="luTitle">레벨업!</div>
+    <div class="lu-sub"   id="luSub">칭찬 마스터 달성!</div>
+    <div class="lu-hint">탭하면 닫힘</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── Data ─── */
+const PRAISES = [
+  "오늘도 빛나고 있어요 ✨",
+  "당신 덕분에 하루가 따뜻해요 🌞",
+  "정말 대단한 사람이에요 👏",
+  "당신의 존재 자체가 선물이에요 🎁",
+  "당신과 함께라서 정말 행복해요 😊",
+  "세상에서 제일 멋진 사람이에요 🌟",
+  "당신의 미소가 세상을 환하게 해요 ☀️",
+  "당신은 정말 특별한 사람이에요 💎",
+  "매일 성장하는 모습이 정말 멋져요 🌱",
+  "당신의 따뜻한 마음이 큰 감동이에요 💝",
+  "오늘도 최선을 다하는 당신이 자랑스러워요 🏆",
+  "당신이 있어서 세상이 아름다워요 🌸",
+  "긍정적인 에너지가 넘치는 사람이에요 ⚡",
+  "당신의 노력은 반드시 꽃을 피울 거예요 🌻",
+  "오늘 하루도 정말 잘 해냈어요 🎉",
+  "당신은 충분히 사랑받을 자격이 있어요 💖",
+  "함께 있으면 절로 즐거워져요 🎈",
+  "당신의 도움 덕분에 힘이 났어요 🙏",
+  "언제나 믿음직스러운 사람이에요 💪",
+  "당신은 빛 그 자체예요 🌟",
+  "세상에 당신이 있어서 정말 다행이에요 🌈",
+  "당신의 용기가 정말 대단해요 🦁",
+  "매 순간 진심을 다하는 모습이 아름다워요 🌺",
+  "당신 덕분에 오늘도 웃을 수 있었어요 😄",
+];
+
+const LEVELS = [
+  { min: 0,   name: '칭찬 새싹',  emoji: '🌱' },
+  { min: 50,  name: '칭찬 고수',  emoji: '🌸' },
+  { min: 150, name: '칭찬 마스터', emoji: '⭐' },
+];
+
+const PTCL = ['❤️','💖','✨','⭐','🌸','💝','🎉','💛','💚','💜','🌟','🎊'];
+
+/* ─── State ─── */
+let G = {
+  ready: false, turn: 0, drawn: null,
+  players: [
+    { name: '', pts: 0, inbox: [] },
+    { name: '', pts: 0, inbox: [] },
+  ],
+};
+
+const save = () => localStorage.setItem('pp26', JSON.stringify(G));
+function load() {
+  try { const d = localStorage.getItem('pp26'); if (d) G = JSON.parse(d); } catch(_) {}
+}
+
+/* ─── Helpers ─── */
+function levelOf(pts) {
+  for (let i = LEVELS.length - 1; i >= 0; i--)
+    if (pts >= LEVELS[i].min) return LEVELS[i];
+  return LEVELS[0];
+}
+
+function levelProgress(pts) {
+  if (pts >= 150) return { pct: 100, cur: pts, next: null, label: '최고 레벨 달성! 🏆' };
+  if (pts >= 50)  return { pct: ((pts - 50) / 100) * 100, cur: pts - 50, next: 100, label: '칭찬 마스터까지' };
+  return               { pct: (pts / 50) * 100,           cur: pts,     next: 50,  label: '칭찬 고수까지'  };
+}
+
+/* ─── Setup ─── */
+function startGame() {
+  const a = document.getElementById('n1').value.trim();
+  const b = document.getElementById('n2').value.trim();
+  if (!a || !b) { showToast('두 플레이어의 이름을 입력해주세요 ✏️'); return; }
+  G.players[0].name = a;
+  G.players[1].name = b;
+  G.ready = true;
+  save();
+  document.getElementById('setup').style.display = 'none';
+  render();
+}
+
+function confirmReset() {
+  if (confirm('새 게임을 시작할까요? 현재 기록이 초기화됩니다.')) {
+    localStorage.removeItem('pp26');
+    location.reload();
+  }
+}
+
+/* ─── Card ─── */
+function drawCard() {
+  if (G.drawn !== null) return;
+  G.drawn = PRAISES[Math.floor(Math.random() * PRAISES.length)];
+  document.getElementById('card-txt').textContent = G.drawn;
+  const card = document.getElementById('card');
+  card.className = 'praise-card cv-' + Math.floor(Math.random() * 5);
+  setTimeout(() => card.classList.add('flipped'), 50);
+  document.getElementById('bDraw').style.display = 'none';
+  document.getElementById('bSend').style.display = 'inline-block';
+  save();
+}
+
+function sendPraise() {
+  if (!G.drawn) return;
+  const si = G.turn, ri = 1 - si;
+  const txt = G.drawn;
+  const oldSPts = G.players[si].pts;
+  const oldRPts = G.players[ri].pts;
+
+  G.players[si].pts += 10;
+  G.players[ri].pts += 5;
+
+  const now = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  G.players[ri].inbox.unshift({ text: txt, from: G.players[si].name, time: now });
+
+  G.drawn = null;
+  G.turn = ri;
+  save();
+
+  fireParticles();
+  showToast(`💌 ${G.players[ri].name}에게 칭찬을 보냈어요! +10점 🎉`);
+
+  // Level up check
+  const luSender   = levelOf(G.players[si].pts).name !== levelOf(oldSPts).name
+    ? { name: G.players[si].name, lv: levelOf(G.players[si].pts) } : null;
+  const luReceiver = levelOf(G.players[ri].pts).name !== levelOf(oldRPts).name
+    ? { name: G.players[ri].name, lv: levelOf(G.players[ri].pts) } : null;
+
+  const card = document.getElementById('card');
+  card.classList.remove('flipped');
+  setTimeout(() => { card.className = 'praise-card'; }, 660);
+  document.getElementById('bSend').style.display = 'none';
+  document.getElementById('bDraw').style.display = 'inline-block';
+
+  render();
+
+  const lu = luSender || luReceiver;
+  if (lu) setTimeout(() => showLevelup(lu.name, lu.lv), 1400);
+}
+
+/* ─── Particles ─── */
+function fireParticles() {
+  const btn = document.getElementById('bSend');
+  const r = btn.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.textContent = PTCL[Math.floor(Math.random() * PTCL.length)];
+    const a = Math.random() * Math.PI * 2;
+    const d = 70 + Math.random() * 100;
+    p.style.cssText = [
+      `left:${cx}px`, `top:${cy}px`,
+      `--dx:${(Math.cos(a)*d).toFixed(1)}px`,
+      `--dy:${(Math.sin(a)*d - 55).toFixed(1)}px`,
+      `--dur:${(.7+Math.random()*.5).toFixed(2)}s`,
+      `--delay:${(Math.random()*.25).toFixed(2)}s`,
+    ].join(';');
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1600);
+  }
+}
+
+/* ─── Level-up overlay ─── */
+function showLevelup(name, lv) {
+  document.getElementById('luEmoji').textContent = lv.emoji;
+  document.getElementById('luTitle').textContent = `${name} 레벨업!`;
+  document.getElementById('luSub').textContent   = `${lv.name} 달성! 🎊`;
+  document.getElementById('luOverlay').classList.add('show');
+  setTimeout(closeLevelup, 3800);
+}
+function closeLevelup() {
+  document.getElementById('luOverlay').classList.remove('show');
+}
+
+/* ─── Toast ─── */
+let toastT;
+function showToast(msg) {
+  clearTimeout(toastT);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  toastT = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ─── Render ─── */
+function render() {
+  for (let i = 0; i < 2; i++) {
+    const p = G.players[i];
+    const lv   = levelOf(p.pts);
+    const prog = levelProgress(p.pts);
+
+    document.getElementById(`pn${i}`).textContent  = p.name;
+    document.getElementById(`pl${i}`).textContent  = `${lv.emoji} ${lv.name}`;
+    document.getElementById(`pts${i}`).textContent = `${p.pts} ⭐`;
+    document.getElementById(`pf${i}`).style.width  = prog.pct + '%';
+    document.getElementById(`pm${i}`).textContent  = prog.label;
+    document.getElementById(`ppc${i}`).textContent = prog.next
+      ? `${prog.cur} / ${prog.next}` : '최고 레벨! 🏆';
+
+    document.getElementById(`pp${i}`).classList.toggle('active', i === G.turn);
+
+    const ib = document.getElementById(`ib${i}`);
+    ib.innerHTML = p.inbox.length === 0
+      ? '<div class="ib-empty">아직 받은 칭찬이 없어요...</div>'
+      : p.inbox.map(m =>
+          `<div class="ib-item">${m.text}<div class="ib-from">💌 ${m.from} · ${m.time}</div></div>`
+        ).join('');
+  }
+  document.getElementById('turn-txt').textContent =
+    `✨ ${G.players[G.turn].name}의 차례예요`;
+}
+
+/* ─── Init ─── */
+load();
+
+if (G.ready) {
+  if (G.drawn) {
+    document.getElementById('card-txt').textContent = G.drawn;
+    document.getElementById('card').classList.add('flipped');
+    document.getElementById('bDraw').style.display = 'none';
+    document.getElementById('bSend').style.display = 'inline-block';
+  }
+  render();
+} else {
+  document.getElementById('setup').style.display = 'flex';
+  if (G.players[0].name) document.getElementById('n1').value = G.players[0].name;
+  if (G.players[1].name) document.getElementById('n2').value = G.players[1].name;
+  setTimeout(() => document.getElementById('n1').focus(), 80);
+}
+
+document.getElementById('n1').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('n2').focus();
+});
+document.getElementById('n2').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGame();
+});
+</script>
+</body>
+</html>

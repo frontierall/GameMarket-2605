@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON BREAKER - 신스웨이브 네온 벽돌깨기</title>
+    <!-- Google Fonts for Retro/Futuristic theme -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="neon-breaker.css">
+</head>
+<body>
+    <!-- Retro Cyber Grid Background -->
+    <div class="grid-background"></div>
+    <div class="glow-effect"></div>
+
+    <div class="game-container">
+        <!-- Header / HUD -->
+        <header class="game-header">
+            <div class="hud-item">
+                <span class="hud-label">SCORE</span>
+                <span id="score-val" class="hud-value neon-blue">00000</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">LEVEL</span>
+                <span id="level-val" class="hud-value neon-purple">1</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">LIVES</span>
+                <div id="lives-container" class="lives-indicator">
+                    <!-- Dynamic lives icon will be added here -->
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Screen -->
+        <main class="game-body">
+            <!-- Game Canvas -->
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+            <!-- Start Menu Overlay -->
+            <div id="start-menu" class="menu-overlay active">
+                <h1 class="game-title neon-text-pink">NEON<br><span class="cyan-glow">BREAKER</span></h1>
+                <p class="game-subtitle">RETRO-SYNTHWAVE ARCADE</p>
+                <div class="menu-buttons">
+                    <button id="btn-start" class="btn btn-pink">GAME START</button>
+                    <button id="btn-how" class="btn btn-blue">HOW TO PLAY</button>
+                    <button id="btn-scores" class="btn btn-purple">HIGH SCORES</button>
+                </div>
+            </div>
+
+            <!-- How To Play Overlay -->
+            <div id="how-to-play-menu" class="menu-overlay hidden">
+                <h2 class="menu-title neon-text-blue">HOW TO PLAY</h2>
+                <div class="instructions-content">
+                    <div class="control-section">
+                        <h3>CONTROLS</h3>
+                        <p>🖱️ <strong>Mouse</strong>: Move paddle</p>
+                        <p>⌨️ <strong>Arrow Keys / A, D</strong>: Move paddle</p>
+                        <p>⌨️ <strong>Spacebar</strong>: Launch ball / Shoot Laser</p>
+                        <p>⌨️ <strong>Esc / P</strong>: Pause / Resume</p>
+                    </div>
+                    <div class="items-section">
+                        <h3>POWER-UPS</h3>
+                        <div class="power-up-desc-list">
+                            <div class="p-desc-item"><span class="p-badge multiball">M</span> <strong>Multiball</strong>: Spawn extra balls</div>
+                            <div class="p-desc-item"><span class="p-badge laser">L</span> <strong>Laser Paddle</strong>: Shoot lasers with Spacebar</div>
+                            <div class="p-desc-item"><span class="p-badge wide">W</span> <strong>Wide Paddle</strong>: Expand paddle size</div>
+                            <div class="p-desc-item"><span class="p-badge shield">S</span> <strong>Shield</strong>: Prevent ball out (1 time)</div>
+                            <div class="p-desc-item"><span class="p-badge slow">SL</span> <strong>Slow Ball</strong>: Reduce ball speed</div>
+                        </div>
+                    </div>
+                </div>
+                <button id="btn-how-back" class="btn btn-pink">BACK</button>
+            </div>
+
+            <!-- Leaderboard Overlay -->
+            <div id="leaderboard-menu" class="menu-overlay hidden">
+                <h2 class="menu-title neon-text-purple">HIGH SCORES</h2>
+                <div class="scores-list" id="scores-list">
+                    <!-- Dynamic scores will be inserted here -->
+                </div>
+                <button id="btn-scores-back" class="btn btn-pink">BACK</button>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div id="game-over-menu" class="menu-overlay hidden">
+                <h2 class="menu-title neon-text-pink">GAME OVER</h2>
+                <p class="final-score-text">FINAL SCORE: <span id="final-score" class="neon-blue">0</span></p>
+                <div class="high-score-input-container hidden" id="high-score-input-container">
+                    <p class="new-record-text neon-text-yellow">NEW HIGH SCORE!</p>
+                    <input type="text" id="player-name" maxlength="10" placeholder="ENTER INITIALS" autocomplete="off">
+                    <button id="btn-submit-score" class="btn btn-yellow">SUBMIT</button>
+                </div>
+                <div class="menu-buttons">
+                    <button id="btn-restart" class="btn btn-pink">PLAY AGAIN</button>
+                    <button id="btn-gameover-main" class="btn btn-blue">MAIN MENU</button>
+                </div>
+            </div>
+
+            <!-- Game Win Overlay -->
+            <div id="game-win-menu" class="menu-overlay hidden">
+                <h2 class="menu-title neon-text-yellow">VICTORY</h2>
+                <p class="congrats-text neon-text-cyan">YOU CLEARED ALL LEVELS!</p>
+                <p class="final-score-text">FINAL SCORE: <span id="win-score" class="neon-blue">0</span></p>
+                <div class="high-score-input-container hidden" id="win-high-score-input-container">
+                    <p class="new-record-text neon-text-yellow">NEW HIGH SCORE!</p>
+                    <input type="text" id="win-player-name" maxlength="10" placeholder="ENTER INITIALS" autocomplete="off">
+                    <button id="btn-win-submit-score" class="btn btn-yellow">SUBMIT</button>
+                </div>
+                <div class="menu-buttons">
+                    <button id="btn-win-restart" class="btn btn-pink">PLAY AGAIN</button>
+                    <button id="btn-win-main" class="btn btn-blue">MAIN MENU</button>
+                </div>
+            </div>
+
+            <!-- Pause Overlay -->
+            <div id="pause-menu" class="menu-overlay hidden">
+                <h2 class="menu-title neon-text-blue">PAUSED</h2>
+                <div class="menu-buttons">
+                    <button id="btn-resume" class="btn btn-pink">RESUME</button>
+                    <button id="btn-pause-main" class="btn btn-blue">MAIN MENU</button>
+                </div>
+            </div>
+
+            <!-- Power-up HUD inside canvas container -->
+            <div id="active-powerups" class="active-powerups-hud">
+                <!-- Dynamic active powerups will be listed here with remaining time bars -->
+            </div>
+
+            <!-- Level Announce Text Overlay -->
+            <div id="level-announcer" class="level-announcer hidden">
+                <h2 id="level-announcer-text">LEVEL 1</h2>
+            </div>
+        </main>
+        
+        <!-- Footer Info -->
+        <footer class="game-footer">
+            <p>[SPACE] Launch Ball / Fire Laser | [Esc/P] Pause</p>
+        </footer>
+    </div>
+
+    <!-- Web Audio & Game Scripts -->
+    <script src="neon-breaker.js"></script>
+</body>
+</html>
