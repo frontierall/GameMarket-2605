@@ -358,10 +358,86 @@
     .toast.success { border-color: rgba(0,255,135,0.5); }
 
     /* Mobile */
+    /* Setup bar */
+    .setup-bar {
+      display: flex; flex-wrap: wrap; align-items: center;
+      justify-content: center; gap: 10px 14px;
+      margin-bottom: 14px;
+    }
+    .count-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+    .setup-label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted); margin-right: 4px;
+    }
+    .count-chip {
+      width: 30px; height: 30px; border-radius: 9px;
+      background: var(--panel-bg); border: 1px solid var(--panel-border);
+      color: var(--text-muted); font-family: var(--font);
+      font-size: 0.82rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .count-chip:hover { color: var(--text); border-color: var(--neon-blue); }
+    .count-chip.active {
+      background: linear-gradient(135deg, var(--neon-green), var(--neon-blue));
+      border-color: transparent; color: #04041a;
+      box-shadow: 0 0 14px rgba(0,255,135,0.25);
+    }
+    .sync-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.78rem; color: var(--text-muted); cursor: pointer;
+      padding: 5px 12px; border-radius: 50px;
+      background: var(--panel-bg); border: 1px solid var(--panel-border);
+      transition: all 0.2s; user-select: none;
+    }
+    .sync-toggle:hover { color: var(--text); }
+    .sync-toggle input { accent-color: var(--neon-green); cursor: pointer; margin: 0; }
+    .roster-toggle {
+      background: var(--panel-bg); border: 1px solid var(--panel-border);
+      color: var(--text-muted); border-radius: 50px;
+      padding: 5px 14px; font-size: 0.78rem; font-family: var(--font);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .roster-toggle:hover, .roster-toggle.active {
+      color: var(--neon-green); border-color: rgba(0,200,100,0.4);
+      background: rgba(0,200,100,0.06);
+    }
+
+    /* Roster paste */
+    .roster-box {
+      background: var(--panel-bg); border: 1px solid var(--panel-border);
+      border-radius: var(--radius); padding: 14px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .roster-box[hidden] { display: none; }
+    .roster-box textarea {
+      width: 100%; min-height: 96px; resize: vertical;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--panel-border); border-radius: 10px;
+      padding: 10px 12px; color: var(--text);
+      font-family: var(--font); font-size: 0.83rem; line-height: 1.6;
+      outline: none; transition: border-color 0.2s;
+    }
+    :root.light .roster-box textarea { background: rgba(0,0,0,0.03); }
+    .roster-box textarea:focus { border-color: var(--neon-green); }
+    .roster-box textarea::placeholder { color: var(--text-muted); }
+    .roster-actions {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 10px; flex-wrap: wrap;
+    }
+    .roster-hint { flex: 1; min-width: 170px; font-size: 0.75rem; color: var(--text-muted); }
+    .btn-icon.roster-apply {
+      color: var(--neon-green); border-color: rgba(0,200,100,0.4); font-weight: 700;
+    }
+    .btn-icon.roster-apply:hover { background: rgba(0,200,100,0.1); }
+
     @media (max-width: 800px) {
       .main-layout { grid-template-columns: 1fr; }
       canvas { height: 300px; }
       .header h1 { font-size: 2rem; }
+      .setup-bar { gap: 8px 10px; }
+      .count-chip { width: 28px; height: 28px; font-size: 0.78rem; }
     }
   </style>
 </head>
@@ -379,6 +455,26 @@
       <h1>사다리 게임</h1>
       <p>참가자와 발표순서를 입력하고 사다리를 타보세요!</p>
       <div class="count-status" id="countStatus">참가자 5명 · 순서 5개 ✓</div>
+    </div>
+
+    <div class="setup-bar">
+      <div class="count-picker" id="countPicker">
+        <span class="setup-label">인원수</span>
+      </div>
+      <label class="sync-toggle">
+        <input type="checkbox" id="syncCheck" checked>
+        <span>발표순서 자동 맞춤</span>
+      </label>
+      <button class="roster-toggle" id="rosterToggle">📋 명단 붙여넣기</button>
+    </div>
+
+    <div class="roster-box" id="rosterBox" hidden>
+      <textarea id="rosterInput" placeholder="명단을 그대로 붙여넣으세요&#10;예) 1. 김민준 (개발팀) 010-1234-5678&#10;    2. 이서연 / 디자인팀&#10;한 줄로: 김민준, 이서연, 박지호"></textarea>
+      <div class="roster-actions">
+        <span class="roster-hint" id="rosterHint">번호·부서·직급·연락처는 걸러내고 이름만 뽑습니다</span>
+        <button class="btn-icon" id="rosterClearBtn">지우기</button>
+        <button class="btn-icon roster-apply" id="rosterApplyBtn">명단 적용</button>
+      </div>
     </div>
 
     <div class="main-layout">
@@ -439,6 +535,8 @@
     // ─── Constants ───────────────────────────────────────────────
     const RESULTS_SESSION_KEY = 'ladderResults';
     const NAMES_SESSION_KEY   = 'ladderNames';
+    const NAMES_LOCAL_KEY     = 'ladderNamesPersist';
+    const SYNC_KEY            = 'ladderAutoSync';
     const COLORS = [
       '#00ff87','#ff006e','#0099ff','#ffbe0b',
       '#fb5607','#a855f7','#3a86ff','#ff99c8',
@@ -457,6 +555,7 @@
     let dragType = null;
     let revealMode = false;
     let lastPaths = null;
+    let autoSync = localStorage.getItem(SYNC_KEY) !== 'off';
 
     // ─── Canvas ──────────────────────────────────────────────────
     const canvas = document.getElementById('ladderCanvas');
@@ -467,12 +566,19 @@
       canvas.height = canvas.offsetHeight;
     }
 
+    // 인원이 적으면 가로줄을 놓을 행이 부족해 결과가 한쪽으로 치우친다.
+    // (기존 n*2-1행은 3명일 때 5행뿐 — 제자리 비율이 균등값 33%에 한참 못 미쳤다)
+    // 최소 11행을 보장하면 3~5명 구간의 결과 분포가 균등에 훨씬 가까워진다.
+    function getNumRows(n) {
+      return Math.max(n * 2 - 1, 11);
+    }
+
     function getLadderMetrics() {
       const n = players.length;
       const w = canvas.width, h = canvas.height;
       const gapX    = w / (n + 1);
       const ladderH = h - LABEL_H * 2;
-      const numRows = n * 2 - 1;
+      const numRows = getNumRows(n);
       const stepY   = ladderH / numRows;
       return { n, w, h, gapX, ladderH, numRows, stepY };
     }
@@ -486,13 +592,14 @@
     function generateLadder() {
       ladderRungs = [];
       const n = players.length;
-      const numRows = n * 2 - 1;
+      const numRows = getNumRows(n);
+      const RUNG_CHANCE = 0.55; // 모든 인원 구간에서 0.4보다 고르게 섞인다
       const rowUsage = new Map();
       for (let r = 0; r < numRows; r++) rowUsage.set(r, new Set());
 
       for (let c = 0; c < n - 1; c++) {
         for (let r = 0; r < numRows; r++) {
-          if (Math.random() < 0.4) {
+          if (Math.random() < RUNG_CHANCE) {
             const used = rowUsage.get(r);
             if (!used.has(c) && !used.has(c + 1)) {
               used.add(c); used.add(c + 1);
@@ -822,7 +929,11 @@
 
     // ─── Cards Rendering ─────────────────────────────────────────
     function saveNamesToSession() {
-      sessionStorage.setItem(NAMES_SESSION_KEY, JSON.stringify({ players, outcomes }));
+      const data = JSON.stringify({ players, outcomes });
+      try {
+        sessionStorage.setItem(NAMES_SESSION_KEY, data);
+        localStorage.setItem(NAMES_LOCAL_KEY, data); // 탭을 닫아도 기억
+      } catch (e) { /* 저장 불가 환경은 무시 */ }
     }
 
     function renderCards() {
@@ -831,7 +942,10 @@
       document.getElementById('playerBadge').textContent  = players.length;
       document.getElementById('outcomeBadge').textContent = outcomes.length;
       document.getElementById('addPlayerBtn').disabled  = players.length  >= MAX_COUNT;
-      document.getElementById('addOutcomeBtn').disabled = outcomes.length >= MAX_COUNT;
+      const addOut = document.getElementById('addOutcomeBtn');
+      addOut.disabled = autoSync || outcomes.length >= MAX_COUNT;
+      addOut.title = autoSync ? '발표순서 자동 맞춤이 켜져 있습니다' : '';
+      renderCountPicker();
       updateCountStatus();
       saveNamesToSession();
     }
@@ -861,9 +975,12 @@
         });
 
         card.querySelector('.card-remove').addEventListener('click', () => {
+          if (type === 'outcome' && autoSync) {
+            showToast('자동 맞춤이 켜져 있어요 — 참가자 수로 조절됩니다'); return;
+          }
           if (arr.length <= MIN_COUNT) { showToast(`최소 ${MIN_COUNT}개 필요합니다`); return; }
           arr.splice(i, 1);
-          if (type === 'player') generateLadder();
+          if (type === 'player') { syncOutcomes(); generateLadder(); }
           renderCards();
           drawStaticLadder();
         });
@@ -923,6 +1040,114 @@
       t._timer = setTimeout(() => t.classList.remove('show'), 2600);
     }
 
+    // ─── Count Control ───────────────────────────────────────────
+    function resizeArr(arr, n, fill) {
+      while (arr.length > n) arr.pop();
+      for (let i = arr.length; i < n; i++) arr.push(fill(i));
+    }
+
+    // 발표순서 개수를 참가자 수에 맞춘다 (이름은 그대로 유지)
+    function syncOutcomes() {
+      if (!autoSync) return;
+      resizeArr(outcomes, players.length, i => `${i + 1}번`);
+    }
+
+    function setCount(n) {
+      n = Math.max(MIN_COUNT, Math.min(MAX_COUNT, n));
+      resizeArr(players,  n, i => `참가자 ${i + 1}`);
+      resizeArr(outcomes, n, i => `${i + 1}번`);
+      generateLadder();
+      renderCards();
+      drawStaticLadder();
+    }
+
+    function renderCountPicker() {
+      document.querySelectorAll('#countPicker .count-chip').forEach(chip => {
+        chip.classList.toggle('active', Number(chip.dataset.n) === players.length);
+      });
+    }
+
+    (function buildCountPicker() {
+      const wrap = document.getElementById('countPicker');
+      for (let n = MIN_COUNT; n <= MAX_COUNT; n++) {
+        const chip = document.createElement('button');
+        chip.className = 'count-chip';
+        chip.dataset.n = n;
+        chip.textContent = n;
+        chip.title = `${n}명으로 맞추기`;
+        chip.addEventListener('click', () => {
+          setCount(n);
+          showToast(`${players.length}명으로 맞췄습니다`, 'success');
+        });
+        wrap.appendChild(chip);
+      }
+    })();
+
+    // ─── Roster Parsing ──────────────────────────────────────────
+    const DEPT_RE = /(팀|부서|본부|센터|그룹|지점|파트|실|과|국|처)$/;
+    const TITLES = new Set([
+      '사원','주임','대리','과장','차장','부장','이사','상무','전무','대표',
+      '팀장','실장','본부장','파트장','선임','책임','수석','인턴','신입',
+      '학생','교수','선생','강사','매니저','리더','참가자','이름','성명','번호',
+      '순번','연번','직급','직책','소속','구분','비고','합계','총원','명단'
+    ]);
+    // 스프레드시트 헤더가 이름으로 잡히는 걸 막는다
+    const EN_STOP = new Set([
+      'no','num','id','name','names','dept','team','order','rank','seq','index',
+      'member','members','participant','email','mail','phone','tel','total','list'
+    ]);
+
+    // 한 줄에서 이름만 뽑아낸다. 못 찾으면 빈 문자열.
+    function extractName(raw) {
+      let t = String(raw);
+      t = t.replace(/\S+@\S+/g, ' ');                                 // 이메일
+      t = t.replace(/\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{4}/g, ' ');       // 전화번호
+      t = t.replace(/[（(\[{<][^）)\]}>]*[）)\]}>]/g, ' ');             // 괄호 안 내용
+      t = t.replace(/^\s*(?:\d+\s*[.)\]:\-]?\s*|[-–—•*·▪◦]\s*)+/, '');  // 앞 번호·불릿
+      t = t.replace(/\s+/g, ' ').trim();
+      if (!t) return '';
+
+      const chunks = t.match(/[가-힣]{2,6}/g);
+      if (chunks) {
+        const hit = chunks.find(c => !DEPT_RE.test(c) && !TITLES.has(c));
+        if (hit) {
+          const stripped = hit.replace(/(님|씨|군|양)$/, '');
+          return stripped.length >= 2 ? stripped : hit;
+        }
+        return '';
+      }
+      const en = t.match(/[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*)?/);
+      if (!en) return '';
+      const name = en[0].replace(/[.'-]+$/, '').trim();
+      if (name.length < 2) return '';
+      return EN_STOP.has(name.toLowerCase().replace(/\s+/g, '')) ? '' : name;
+    }
+
+    // 여러 줄이면 한 줄 = 한 사람(쉼표·탭은 부서/연락처 같은 다음 칸)으로 보고,
+    // 한 줄뿐이면 쉼표로 이어 쓴 명단으로 본다.
+    function parseRoster(text) {
+      const lines = String(text).split(/\r?\n/).filter(l => l.trim());
+      const multiLine = lines.length > 1;
+      const names = [];
+
+      // "김민준 이서연 박지호"처럼 한 줄에 이름만 띄어 쓴 경우
+      if (lines.length === 1 && !/[,;|\t]/.test(lines[0])) {
+        const tokens = lines[0].trim().split(/\s+/);
+        if (tokens.length >= 2 && tokens.every(t => /^[가-힣]{2,4}$/.test(t))) return tokens;
+      }
+
+      lines.forEach(line => {
+        const parts = line.split(/[,;|\t]/);
+        for (const part of parts) {
+          const name = extractName(part);
+          if (!name) continue;
+          names.push(name);
+          if (multiLine) break; // 한 줄에서 이름은 하나만
+        }
+      });
+      return names;
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────
     function getAllBtns() {
       return [
@@ -937,6 +1162,7 @@
     document.getElementById('addPlayerBtn').addEventListener('click', () => {
       if (players.length >= MAX_COUNT) return showToast('최대 10명');
       players.push(`참가자 ${players.length + 1}`);
+      syncOutcomes();
       generateLadder();
       renderCards();
       drawStaticLadder();
@@ -949,6 +1175,69 @@
       renderCards();
       drawStaticLadder();
       showToast('순서 추가됨', 'success');
+    });
+
+    document.getElementById('syncCheck').addEventListener('change', e => {
+      autoSync = e.target.checked;
+      try { localStorage.setItem(SYNC_KEY, autoSync ? 'on' : 'off'); } catch (err) {}
+      syncOutcomes();
+      renderCards();
+      drawStaticLadder();
+      showToast(autoSync ? '발표순서를 참가자 수에 맞춥니다' : '발표순서를 직접 조절합니다', 'success');
+    });
+
+    document.getElementById('rosterToggle').addEventListener('click', e => {
+      const box = document.getElementById('rosterBox');
+      box.hidden = !box.hidden;
+      e.currentTarget.classList.toggle('active', !box.hidden);
+      if (!box.hidden) document.getElementById('rosterInput').focus();
+    });
+
+    document.getElementById('rosterClearBtn').addEventListener('click', () => {
+      const input = document.getElementById('rosterInput');
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+      input.focus();
+    });
+
+    document.getElementById('rosterInput').addEventListener('input', e => {
+      const found = parseRoster(e.target.value).length;
+      const hint = document.getElementById('rosterHint');
+      if (!found) {
+        hint.textContent = '번호·부서·직급·연락처는 걸러내고 이름만 뽑습니다';
+        hint.style.color = '';
+      } else {
+        hint.textContent = found > MAX_COUNT
+          ? `이름 ${found}개 인식 — 앞에서 ${MAX_COUNT}명만 적용됩니다`
+          : `이름 ${found}개 인식됨`;
+        hint.style.color = found > MAX_COUNT ? 'var(--neon-pink)' : 'var(--neon-green)';
+      }
+    });
+
+    document.getElementById('rosterApplyBtn').addEventListener('click', () => {
+      const found = parseRoster(document.getElementById('rosterInput').value);
+      if (found.length < MIN_COUNT) {
+        showToast(`이름을 ${MIN_COUNT}개 이상 찾지 못했습니다`); return;
+      }
+      const over = Math.max(0, found.length - MAX_COUNT);
+      const list = found.slice(0, MAX_COUNT);
+
+      cancelAnimationFrame(animationId);
+      players  = list.slice();
+      outcomes = list.map((_, i) => `${i + 1}번`);
+      lastPaths = null;
+      revealMode = false;
+      sessionStorage.removeItem(RESULTS_SESSION_KEY);
+      document.getElementById('resultsSection').style.display = 'none';
+      getAllBtns().forEach(b => b.disabled = false);
+
+      generateLadder();
+      renderCards();
+      drawStaticLadder();
+      showToast(
+        over ? `${list.length}명 적용 (최대 ${MAX_COUNT}명, ${over}명 제외)` : `${list.length}명 적용됐습니다`,
+        over ? 'error' : 'success'
+      );
     });
 
     document.getElementById('startGameBtn').addEventListener('click', () => {
@@ -1009,11 +1298,21 @@
     window.addEventListener('load', () => {
       applyTheme();
       resizeCanvas();
-      const savedNames = sessionStorage.getItem(NAMES_SESSION_KEY);
+      document.getElementById('syncCheck').checked = autoSync;
+      // 같은 탭이면 세션 값, 아니면 지난번에 쓴 명단을 복원한다
+      let savedNames = null;
+      try {
+        savedNames = sessionStorage.getItem(NAMES_SESSION_KEY) || localStorage.getItem(NAMES_LOCAL_KEY);
+      } catch (e) {}
       if (savedNames) {
-        const parsed = JSON.parse(savedNames);
-        players  = parsed.players;
-        outcomes = parsed.outcomes;
+        try {
+          const parsed = JSON.parse(savedNames);
+          if (Array.isArray(parsed.players) && Array.isArray(parsed.outcomes)
+              && parsed.players.length >= MIN_COUNT && parsed.players.length <= MAX_COUNT) {
+            players  = parsed.players;
+            outcomes = parsed.outcomes;
+          }
+        } catch (e) {}
       }
       generateLadder();
       renderCards();
