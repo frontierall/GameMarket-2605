@@ -82,6 +82,11 @@ body {
     position: relative;
     overflow: hidden;
     cursor: none;
+    /* 터치 드래그 시 화면 스크롤·확대가 일어나지 않게 */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .game-over {
@@ -203,6 +208,27 @@ body {
 
 /* 반응형 디자인 */
 @media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+
+    .game-header {
+        padding: 15px 20px;
+    }
+
+    .header-content {
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .game-main {
+        min-height: 400px;
+    }
+
+    .game-controls {
+        padding: 20px;
+    }
+
     .game-header h1 {
         font-size: 1.5rem;
     }

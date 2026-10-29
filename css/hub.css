@@ -337,6 +337,44 @@ body {
     filter: drop-shadow(0 0 8px #ff007f) drop-shadow(0 0 16px #9d00ff);
 }
 
+.game-icon.orbit-hop-game {
+    background: radial-gradient(circle at 30% 30%, #2b1055 0%, #0a0516 70%);
+    box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.35);
+}
+
+.game-icon.block-duel-game {
+    background: linear-gradient(90deg, #1e3c72 0%, #1e3c72 49%, #fff 49%, #fff 51%, #b21f1f 51%, #b21f1f 100%);
+}
+
+.game-icon.memory-pad-game {
+    background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+}
+
+.game-icon.two-truths-game {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+}
+
+.game-icon.orbit-hop-game,
+.game-icon.block-duel-game,
+.game-icon.memory-pad-game,
+.game-icon.two-truths-game {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.emoji-icon {
+    font-size: 4rem;
+}
+
+.orbit-hop-game .emoji-icon {
+    filter: drop-shadow(0 0 8px #00f0ff) drop-shadow(0 0 16px #9d00ff);
+}
+
+.memory-pad-game .emoji-icon {
+    filter: drop-shadow(0 0 8px #39ff14);
+}
+
 .game-card h2 {
     font-size: 1.8rem;
     margin-bottom: 15px;

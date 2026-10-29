@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>둘은 진실</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/two-truths.css">
+</head>
+<body>
+  <div class="page-wrapper">
+    <div class="top-bar">
+      <a href="index.html" class="back-btn">← 게임 허브</a>
+      <button class="theme-toggle" id="themeToggle" type="button">
+        <span class="toggle-icon">🌙</span>
+        <span class="toggle-label">라이트 모드</span>
+      </button>
+    </div>
+
+    <div class="header">
+      <h1>둘은 진실</h1>
+      <p>나에 대한 문장 셋 — 둘은 진실, 하나는 거짓. 거짓을 찾아보세요!</p>
+      <div class="progress-pill" id="progressPill" hidden></div>
+    </div>
+
+    <!-- 1) 준비: 참가자 명단 -->
+    <section class="setup" id="setupSection">
+      <div class="setup-bar">
+        <div class="count-picker" id="countPicker">
+          <span class="setup-label">인원수</span>
+        </div>
+        <button class="pill-btn" id="rosterToggle" type="button">📋 명단 붙여넣기</button>
+        <button class="pill-btn" id="shuffleBtn" type="button">🔀 순서 섞기</button>
+      </div>
+
+      <div class="roster-box" id="rosterBox" hidden>
+        <textarea id="rosterInput" placeholder="명단을 그대로 붙여넣으세요&#10;예) 1. 김민준 (개발팀) 010-1234-5678&#10;    2. 이서연 / 디자인팀&#10;한 줄로: 김민준, 이서연, 박지호"></textarea>
+        <div class="roster-actions">
+          <span class="roster-hint" id="rosterHint">번호·부서·직급·연락처는 걸러내고 이름만 뽑습니다</span>
+          <button class="btn-icon" id="rosterClearBtn" type="button">지우기</button>
+          <button class="btn-icon roster-apply" id="rosterApplyBtn" type="button">명단 적용</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          발표 순서
+          <span class="panel-badge" id="playerBadge">0</span>
+        </div>
+        <ol class="player-grid" id="playerGrid"></ol>
+        <button class="panel-add-btn" id="addPlayerBtn" type="button">＋ 참가자 추가</button>
+      </div>
+
+      <div class="control-bar">
+        <button class="btn btn-primary" id="startBtn" type="button">▶ 게임 시작</button>
+      </div>
+      <p class="setup-tip">발표자가 문장을 쓰는 동안 화면을 가릴 수 있어요. 프로젝터에 띄워 함께 해보세요.</p>
+    </section>
+
+    <!-- 2) 진행: 발표·투표·공개 -->
+    <div class="play-layout" id="playSection" hidden>
+      <main class="stage" id="stage"></main>
+      <aside class="panel scoreboard" id="scoreboard"></aside>
+    </div>
+  </div>
+
+  <div class="countdown" id="countdown" aria-hidden="true"></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="js/roster.js"></script>
+  <script src="js/two-truths.js"></script>
+</body>
+</html>

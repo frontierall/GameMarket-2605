@@ -85,6 +85,7 @@ body {
     flex-direction: column;
     align-items: center;
     width: 840px;
+    max-width: calc(100vw - 16px);
     background: rgba(10, 5, 22, 0.7);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -192,7 +193,8 @@ body {
 .game-body {
     position: relative;
     width: 800px;
-    height: 600px;
+    max-width: 100%;
+    height: auto; /* follows the canvas, which keeps its 4:3 ratio */
     border-radius: 8px;
     overflow: hidden;
     border: 2px solid rgba(0, 240, 255, 0.3);
@@ -201,7 +203,12 @@ body {
 
 #gameCanvas {
     display: block;
+    width: 100%;
+    height: auto;
     background-color: #030107;
+    /* Prevent scroll / zoom while dragging the paddle */
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Overlay Menus with Glassmorphism */
@@ -638,4 +645,152 @@ body {
 /* Utiltity display classes */
 .hidden {
     display: none !important;
+}
+
+/* Back-to-hub link */
+.top-bar {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 12px;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--neon-blue);
+    text-decoration: none;
+    border: 1px solid rgba(0, 240, 255, 0.35);
+    border-radius: 50px;
+    background: rgba(0, 240, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+    background: rgba(0, 240, 255, 0.12);
+    box-shadow: 0 0 12px var(--neon-blue-glow);
+    transform: translateX(-3px);
+}
+
+/* Responsive: scale the game down on narrow screens (canvas keeps 4:3) */
+@media (max-width: 860px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow-x: hidden;
+        overflow-y: auto;
+        align-items: flex-start;
+        padding: 8px 0;
+    }
+
+    .game-container {
+        padding: 10px;
+    }
+
+    .game-header {
+        padding: 8px 12px;
+        margin-bottom: 10px;
+    }
+
+    .hud-value {
+        font-size: 1.2rem;
+    }
+
+    .menu-overlay {
+        padding: 16px;
+        overflow-y: auto;
+        justify-content: flex-start;
+        justify-content: safe center;
+    }
+
+    .instructions-content {
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+        font-size: 0.9rem;
+    }
+
+    .game-title {
+        font-size: 3rem;
+        letter-spacing: 4px;
+    }
+
+    .menu-title {
+        font-size: 2rem;
+    }
+
+    #level-announcer-text {
+        font-size: 2.4rem;
+    }
+}
+
+@media (max-width: 520px) {
+    .hud-label {
+        font-size: 0.65rem;
+        letter-spacing: 1px;
+    }
+
+    .hud-value {
+        font-size: 1rem;
+    }
+
+    .game-title {
+        font-size: 2.2rem;
+        margin-bottom: 12px;
+    }
+
+    .game-subtitle {
+        margin-bottom: 16px;
+    }
+
+    .menu-title {
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+    }
+
+    .menu-buttons {
+        width: 100%;
+        max-width: 240px;
+        gap: 8px;
+    }
+
+    .btn {
+        padding: 10px 16px;
+        font-size: 0.95rem;
+    }
+
+    .scores-list {
+        width: 100%;
+    }
+
+    .final-score-text {
+        font-size: 1.1rem;
+    }
+
+    .game-footer {
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+    }
+
+    #level-announcer-text {
+        font-size: 1.8rem;
+    }
+}
+
+/* Short screens (landscape phones, small laptops): fit the board to the viewport height */
+@media (max-height: 820px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+    }
+
+    .game-body {
+        width: min(800px, 100%, calc((100vh - 170px) * 4 / 3));
+        min-width: min(280px, 100%);
+    }
 }

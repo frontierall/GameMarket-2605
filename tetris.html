@@ -17,6 +17,7 @@
                 <span>점수: <span id="score">0</span></span>
                 <span>레벨: <span id="level">1</span></span>
                 <span>라인: <span id="lines">0</span></span>
+                <span>최고: <span id="bestScore">0</span></span>
             </div>
         </header>
 
@@ -31,13 +32,14 @@
                         <h2>게임 오버!</h2>
                         <p>최종 점수: <span id="finalScore">0</span></p>
                         <p>제거한 라인: <span id="finalLines">0</span></p>
+                        <p id="newBestMsg" class="new-best hidden">새 최고 기록!</p>
                         <button id="restartBtn" class="btn btn-primary">다시 시작</button>
                     </div>
 
                     <!-- 일시정지 화면 -->
                     <div id="pauseScreen" class="pause-screen hidden">
                         <h2>일시정지</h2>
-                        <p>P키를 눌러 계속하기</p>
+                        <p>P키 또는 화면을 눌러 계속하기</p>
                     </div>
                 </div>
 
@@ -78,10 +80,40 @@
                             <span class="key">P</span>
                             <span>일시정지</span>
                         </div>
+
+                        <div class="touch-instructions">
+                            <h4>터치 조작</h4>
+                            <div class="instruction-item">
+                                <span class="key">탭</span>
+                                <span>회전</span>
+                            </div>
+                            <div class="instruction-item">
+                                <span class="key">좌우 드래그</span>
+                                <span>칸 단위 이동</span>
+                            </div>
+                            <div class="instruction-item">
+                                <span class="key">아래 드래그</span>
+                                <span>천천히 내리기</span>
+                            </div>
+                            <div class="instruction-item">
+                                <span class="key">빠른 스와이프</span>
+                                <span>바로 떨어뜨리기</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- 온스크린 버튼 (터치 기기·좁은 화면에서만 표시) -->
+    <div id="touchControls" class="touch-controls" aria-label="터치 조작 버튼">
+        <button type="button" class="touch-btn" data-action="left" aria-label="왼쪽으로 이동">←</button>
+        <button type="button" class="touch-btn" data-action="rotate" aria-label="회전">⟳</button>
+        <button type="button" class="touch-btn" data-action="right" aria-label="오른쪽으로 이동">→</button>
+        <button type="button" class="touch-btn" data-action="down" aria-label="천천히 내리기">↓</button>
+        <button type="button" class="touch-btn touch-btn-drop" data-action="hardDrop" aria-label="바로 떨어뜨리기">⤓ 드롭</button>
+        <button type="button" class="touch-btn touch-btn-pause" data-action="pause" aria-label="일시정지 또는 시작">⏸</button>
     </div>
 
     <script src="js/tetris.js"></script>

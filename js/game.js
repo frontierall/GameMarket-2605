@@ -1,9 +1,37 @@
+// 최고 점수 저장 키 (예전 범용 키 'highScore'는 한 번만 옮겨온다)
+const HIGH_SCORE_KEY = 'gm_ball-game_best';
+const LEGACY_HIGH_SCORE_KEY = 'highScore';
+
+function loadHighScore() {
+    try {
+        let stored = localStorage.getItem(HIGH_SCORE_KEY);
+        if (stored === null) {
+            const legacy = localStorage.getItem(LEGACY_HIGH_SCORE_KEY);
+            if (legacy !== null && !isNaN(parseInt(legacy, 10))) {
+                stored = String(parseInt(legacy, 10));
+                localStorage.setItem(HIGH_SCORE_KEY, stored);
+            }
+        }
+        return parseInt(stored, 10) || 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+function saveHighScore(value) {
+    try {
+        localStorage.setItem(HIGH_SCORE_KEY, value);
+    } catch (e) {
+        // 저장소를 쓸 수 없는 환경(사생활 보호 모드 등)에서는 무시
+    }
+}
+
 // 게임 상태 관리
 const gameState = {
     isRunning: false,
     isPaused: false,
     score: 0,
-    highScore: localStorage.getItem('highScore') || 0,
+    highScore: loadHighScore(),
     player: null,
     enemies: [],
     collectibles: [],
@@ -61,11 +89,25 @@ function init() {
         gameState.keys[e.key] = false;
     });
 
-    // 마우스 이벤트
-    elements.gameCanvas.addEventListener('mousemove', (e) => {
+    // 포인터 이벤트 (마우스 + 터치 드래그 + 펜)
+    const updatePointer = (e) => {
         const rect = elements.gameCanvas.getBoundingClientRect();
         gameState.mouseX = e.clientX - rect.left;
         gameState.mouseY = e.clientY - rect.top;
+    };
+    elements.gameCanvas.addEventListener('pointermove', updatePointer);
+    elements.gameCanvas.addEventListener('pointerdown', (e) => {
+        updatePointer(e);
+        // 손가락이 영역 밖으로 나가도 계속 따라오도록 포인터 캡처
+        if (e.pointerType !== 'mouse' && elements.gameCanvas.setPointerCapture) {
+            try { elements.gameCanvas.setPointerCapture(e.pointerId); } catch (err) { /* 무시 */ }
+        }
+    });
+
+    // 화면 크기가 바뀌면 (모바일 회전 등) 영역 크기 다시 계산
+    window.addEventListener('resize', () => {
+        config.canvasWidth = elements.gameCanvas.offsetWidth;
+        config.canvasHeight = elements.gameCanvas.offsetHeight;
     });
 }
 
@@ -216,6 +258,8 @@ function gameLoop() {
 // 게임 시작
 function startGame() {
     gameState.isRunning = true;
+    gameState.isPaused = false;
+    elements.pauseBtn.textContent = '일시정지';
     gameState.score = 0;
     gameState.enemies = [];
     gameState.collectibles = [];
@@ -226,7 +270,11 @@ function startGame() {
     elements.pauseBtn.classList.remove('hidden');
     elements.gameOverScreen.classList.add('hidden');
 
-    // 플레이어 생성
+    // 플레이어 생성 (터치 기기는 손가락을 대기 전까지 가운데에 머물도록)
+    config.canvasWidth = elements.gameCanvas.offsetWidth;
+    config.canvasHeight = elements.gameCanvas.offsetHeight;
+    gameState.mouseX = config.canvasWidth / 2;
+    gameState.mouseY = config.canvasHeight / 2;
     gameState.player = createPlayer();
 
     // 적 생성 타이머
@@ -268,7 +316,7 @@ function gameOver() {
     // 최고 점수 업데이트
     if (gameState.score > gameState.highScore) {
         gameState.highScore = gameState.score;
-        localStorage.setItem('highScore', gameState.highScore);
+        saveHighScore(gameState.highScore);
         elements.highScoreDisplay.textContent = gameState.highScore;
     }
 

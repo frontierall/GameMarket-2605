@@ -343,3 +343,88 @@ body {
 .piece-drop {
     animation: dropAnimation 0.2s ease-out;
 }
+/* 새 최고 기록 표시 */
+.game-over .new-best {
+    color: #ffd54f;
+    font-weight: bold;
+}
+
+#gameBoard {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.pause-screen {
+    cursor: pointer;
+}
+
+/* 터치 조작 (기본: 숨김) */
+.touch-instructions {
+    display: none;
+    margin-top: 15px;
+}
+
+.touch-controls {
+    display: none;
+}
+
+.touch-btn {
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 600;
+    min-height: 56px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.08s ease, filter 0.08s ease;
+}
+
+.touch-btn.pressed {
+    transform: scale(0.94);
+    filter: brightness(1.2);
+}
+
+.touch-btn-drop {
+    font-size: 1.1rem;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.touch-btn-pause {
+    background: #6c757d;
+}
+
+/* 터치 기기 또는 폭 600px 이하에서만 버튼 표시 */
+@media (pointer: coarse), (max-width: 600px) {
+    body {
+        padding-bottom: 160px; /* 하단 고정 버튼 공간 */
+    }
+
+    .touch-controls {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        background: rgba(30, 20, 60, 0.85);
+        backdrop-filter: blur(8px);
+        z-index: 100;
+    }
+
+    .touch-instructions {
+        display: block;
+    }
+
+    #gameBoard {
+        width: auto;
+        height: min(480px, 58vh);
+    }
+}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0516">
+    <title>궤도 점프 - 원버튼 우주 아케이드</title>
+    <!-- 레트로 퓨처 폰트 (neon-breaker와 동일) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/orbit-hop.css">
+</head>
+<body>
+    <div class="glow-effect"></div>
+
+    <div class="game-container">
+        <!-- 상단 HUD -->
+        <header class="game-header">
+            <a href="index.html" class="back-btn">← 게임 선택</a>
+            <div class="hud">
+                <div class="hud-item">
+                    <span class="hud-label">점수</span>
+                    <span id="score-val" class="hud-value neon-blue">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">최고</span>
+                    <span id="best-val" class="hud-value neon-pink">0</span>
+                </div>
+            </div>
+            <button id="btn-pause" class="icon-btn" type="button" aria-label="일시정지">II</button>
+        </header>
+
+        <!-- 게임 화면 -->
+        <main id="stage" class="game-stage">
+            <canvas id="gameCanvas"></canvas>
+
+            <!-- 시작 화면 -->
+            <div id="start-menu" class="menu-overlay">
+                <h1 class="game-title neon-text-pink">궤도<br><span class="cyan-glow">점프</span></h1>
+                <p class="game-subtitle">ORBIT HOP · ONE BUTTON ARCADE</p>
+                <ul class="how-list">
+                    <li>위성은 행성 주위를 <strong>자동으로 공전</strong>합니다</li>
+                    <li><strong>탭 · 클릭 · 스페이스</strong>로 진행 방향(접선)으로 발사!</li>
+                    <li>다음 행성의 <strong>궤도 원</strong>에 닿으면 붙고 점수 획득</li>
+                    <li>궤도 중심을 정확히 노리면 <strong class="neon-text-yellow">퍼펙트</strong> 보너스</li>
+                    <li>화면 밖으로 나가거나 <strong>소행성</strong>에 맞으면 끝</li>
+                </ul>
+                <div class="menu-buttons">
+                    <button id="btn-start" class="btn btn-pink" type="button">게임 시작</button>
+                </div>
+                <p class="menu-hint">P / Esc : 일시정지</p>
+            </div>
+
+            <!-- 일시정지 화면 -->
+            <div id="pause-menu" class="menu-overlay hidden">
+                <h2 class="menu-title neon-text-blue">일시정지</h2>
+                <div class="menu-buttons">
+                    <button id="btn-resume" class="btn btn-pink" type="button">계속하기</button>
+                    <button id="btn-pause-restart" class="btn btn-blue" type="button">처음부터</button>
+                </div>
+                <p class="menu-hint">P 키로도 계속할 수 있어요</p>
+            </div>
+
+            <!-- 게임 오버 화면 -->
+            <div id="game-over-menu" class="menu-overlay hidden">
+                <h2 class="menu-title neon-text-pink">게임 오버</h2>
+                <p id="over-reason" class="over-reason">궤도를 이탈했습니다</p>
+                <p class="final-score-text">최종 점수 <span id="final-score" class="neon-blue">0</span></p>
+                <p class="final-sub">도착한 행성 <span id="final-planets">0</span>개 · 최고 <span id="final-best">0</span></p>
+                <p id="new-record" class="new-record-text neon-text-yellow hidden">신기록!</p>
+                <div class="menu-buttons">
+                    <button id="btn-restart" class="btn btn-pink" type="button">다시 하기</button>
+                    <a href="index.html" class="btn btn-blue">게임 선택으로</a>
+                </div>
+            </div>
+        </main>
+
+        <footer class="game-footer">
+            <p>[탭 / 클릭 / Space] 발사 · [P / Esc] 일시정지</p>
+        </footer>
+    </div>
+
+    <script src="js/orbit-hop.js"></script>
+</body>
+</html>

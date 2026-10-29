@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>낙하 블록 듀얼</title>
+    <link rel="stylesheet" href="css/block-duel.css">
+</head>
+<body>
+    <!-- 좁은 화면 / 터치 기기 안내 -->
+    <div id="narrowNotice" class="narrow-notice">
+        <div class="narrow-box">
+            <h2>키보드가 필요한 2인 게임</h2>
+            <p>낙하 블록 듀얼은 한 키보드로 두 사람이 함께 하는 게임이에요.<br>
+               넓은 화면의 PC나 노트북에서 플레이해 주세요.</p>
+            <div class="narrow-actions">
+                <a href="index.html" class="btn">게임 선택으로</a>
+                <button id="narrowDismissBtn" type="button" class="btn btn-primary">그래도 보기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <header class="game-header">
+            <div class="header-content">
+                <a href="index.html" class="back-btn">← 게임 선택</a>
+                <h1>낙하 블록 듀얼</h1>
+            </div>
+            <div class="score-board">
+                <span class="p1-tag">P1 승: <span id="p1Wins">0</span></span>
+                <span>라운드 <span id="roundNum">1</span> · 3판 2선승</span>
+                <span class="p2-tag">P2 승: <span id="p2Wins">0</span></span>
+            </div>
+        </header>
+
+        <main class="game-main">
+            <div class="duel-area">
+                <!-- P1 -->
+                <section class="player-panel p1" id="p1Panel">
+                    <h2 class="player-name">P1</h2>
+                    <div class="player-body">
+                        <div class="board-container">
+                            <canvas id="p1Board" class="duel-board" width="300" height="600"></canvas>
+                            <div id="p1Flag" class="board-flag hidden"></div>
+                        </div>
+                        <div class="player-side">
+                            <div class="mini-box">
+                                <h3>다음</h3>
+                                <canvas id="p1Next" class="next-canvas" width="120" height="120"></canvas>
+                            </div>
+                            <div class="mini-box stats">
+                                <div>라인 <strong id="p1Lines">0</strong></div>
+                                <div>보낸 줄 <strong id="p1Sent">0</strong></div>
+                                <div>받을 줄 <strong id="p1Pending" class="pending">0</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="keys-guide">
+                        <span class="key">W</span> 회전
+                        <span class="key">A</span><span class="key">D</span> 이동
+                        <span class="key">S</span> 내리기
+                        <span class="key">왼쪽 Shift</span> 바로 떨어뜨리기
+                    </div>
+                </section>
+
+                <!-- 가운데 -->
+                <section class="center-panel">
+                    <button id="startBtn" type="button" class="btn btn-primary">대결 시작</button>
+                    <button id="pauseBtn" type="button" class="btn hidden">일시정지</button>
+                    <div class="instructions">
+                        <h4>규칙</h4>
+                        <p>줄을 지우면 상대 바닥에 구멍 하나 뚫린 방해 줄이 올라가요.</p>
+                        <ul>
+                            <li>2줄 → 1줄</li>
+                            <li>3줄 → 2줄</li>
+                            <li>4줄 → 4줄</li>
+                        </ul>
+                        <p>받을 줄이 쌓여 있을 때 줄을 지우면 먼저 상쇄돼요.</p>
+                        <p>블록이 꼭대기에 닿으면 패배. 3판 2선승!</p>
+                        <p class="small"><span class="key">P</span> / <span class="key">Esc</span> 일시정지<br>
+                           <span class="key">Space</span> 시작 · 다음 라운드</p>
+                    </div>
+                </section>
+
+                <!-- P2 -->
+                <section class="player-panel p2" id="p2Panel">
+                    <h2 class="player-name">P2</h2>
+                    <div class="player-body">
+                        <div class="board-container">
+                            <canvas id="p2Board" class="duel-board" width="300" height="600"></canvas>
+                            <div id="p2Flag" class="board-flag hidden"></div>
+                        </div>
+                        <div class="player-side">
+                            <div class="mini-box">
+                                <h3>다음</h3>
+                                <canvas id="p2Next" class="next-canvas" width="120" height="120"></canvas>
+                            </div>
+                            <div class="mini-box stats">
+                                <div>라인 <strong id="p2Lines">0</strong></div>
+                                <div>보낸 줄 <strong id="p2Sent">0</strong></div>
+                                <div>받을 줄 <strong id="p2Pending" class="pending">0</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="keys-guide">
+                        <span class="key">↑</span> 회전
+                        <span class="key">←</span><span class="key">→</span> 이동
+                        <span class="key">↓</span> 내리기
+                        <span class="key">Enter</span> 바로 떨어뜨리기
+                    </div>
+                </section>
+            </div>
+
+            <!-- 라운드/매치 결과 · 일시정지 화면 -->
+            <div id="resultScreen" class="result-screen hidden">
+                <div class="result-box">
+                    <h2 id="resultTitle">P1 승리!</h2>
+                    <p id="resultDetail">라운드 스코어 1 : 0</p>
+                    <button id="resultBtn" type="button" class="btn btn-primary">다음 라운드</button>
+                    <p class="small">Space 키로도 진행할 수 있어요</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/tetris.js"></script>
+    <script src="js/block-duel.js"></script>
+</body>
+</html>

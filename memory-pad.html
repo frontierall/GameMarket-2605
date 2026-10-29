@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기억 패드</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/memory-pad.css">
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="top-bar">
+            <a href="index.html" class="back-btn">← 게임 허브</a>
+            <button class="theme-toggle" id="themeToggle" type="button">
+                <span class="toggle-icon">🌙</span>
+                <span class="toggle-label">라이트 모드</span>
+            </button>
+        </div>
+
+        <header class="header">
+            <h1>기억 패드</h1>
+            <p>빛나는 순서를 외워서 그대로 눌러 보세요!</p>
+        </header>
+
+        <!-- 설정 화면 -->
+        <section id="setupScreen" class="panel setup">
+            <div class="setup-row">
+                <div class="setup-label">모드</div>
+                <div class="seg" id="modeSeg">
+                    <button type="button" class="seg-btn active" data-mode="solo">🙋 혼자 하기</button>
+                    <button type="button" class="seg-btn" data-mode="party">👥 파티 모드</button>
+                </div>
+            </div>
+
+            <div class="setup-row">
+                <div class="setup-label">패드 수</div>
+                <div class="seg" id="levelSeg">
+                    <button type="button" class="seg-btn active" data-pads="4">쉬움 · 4개</button>
+                    <button type="button" class="seg-btn" data-pads="6">보통 · 6개</button>
+                    <button type="button" class="seg-btn" data-pads="9">어려움 · 9개</button>
+                </div>
+            </div>
+
+            <div class="setup-row">
+                <div class="setup-label">속도</div>
+                <div class="seg" id="speedSeg">
+                    <button type="button" class="seg-btn" data-speed="slow">느리게</button>
+                    <button type="button" class="seg-btn active" data-speed="normal">보통</button>
+                    <button type="button" class="seg-btn" data-speed="fast">빠르게</button>
+                </div>
+            </div>
+
+            <div id="partySetup" class="party-setup hidden">
+                <div class="setup-row">
+                    <div class="setup-label">인원수</div>
+                    <div class="seg" id="countSeg">
+                        <button type="button" class="seg-btn active" data-count="2">2명</button>
+                        <button type="button" class="seg-btn" data-count="3">3명</button>
+                        <button type="button" class="seg-btn" data-count="4">4명</button>
+                        <button type="button" class="seg-btn" data-count="5">5명</button>
+                        <button type="button" class="seg-btn" data-count="6">6명</button>
+                    </div>
+                </div>
+                <label class="names-label" for="namesInput">이름 (선택 · 한 줄에 한 명, 또는 쉼표로 구분 · 최대 6명)</label>
+                <textarea id="namesInput" class="names-input" rows="3" placeholder="예) 민준, 서연, 지호&#10;비워 두면 '참가자 1, 2…'로 시작해요"></textarea>
+                <div id="namesPreview" class="chips"></div>
+                <p id="namesNote" class="note"></p>
+            </div>
+
+            <div id="soloBest" class="best-line">최고 기록: <strong id="bestValue">0</strong>개</div>
+
+            <button type="button" id="startBtn" class="btn btn-primary btn-big">게임 시작 <span class="kbd">Enter</span></button>
+
+            <div class="howto">
+                <p>① 패드가 켜지는 순서를 잘 보세요. ② 같은 순서로 누르세요. ③ 성공할 때마다 하나씩 길어져요.</p>
+                <p>마우스 클릭 · 손가락 터치 · 숫자 키 <span class="kbd">1</span>~<span class="kbd">9</span> 로 누를 수 있어요.</p>
+            </div>
+        </section>
+
+        <!-- 게임 화면 -->
+        <section id="gameScreen" class="panel game hidden">
+            <div class="status-bar">
+                <div class="stat-box">
+                    <span class="stat-label">라운드</span>
+                    <span class="stat-value" id="roundValue">1</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">길이</span>
+                    <span class="stat-value" id="lengthValue">1</span>
+                </div>
+                <div class="stat-box" id="bestBox">
+                    <span class="stat-label">최고 기록</span>
+                    <span class="stat-value" id="bestInGame">0</span>
+                </div>
+            </div>
+
+            <div id="playersBar" class="chips players-bar hidden"></div>
+
+            <div class="message" id="message">준비!</div>
+            <div class="progress" id="progress"></div>
+
+            <div id="padGrid" class="pad-grid pads-4"></div>
+
+            <div class="game-actions">
+                <button type="button" id="readyBtn" class="btn btn-primary btn-big hidden">보여 주세요 ▶ <span class="kbd">Enter</span></button>
+                <button type="button" id="quitBtn" class="btn btn-ghost">그만하기</button>
+            </div>
+        </section>
+
+        <!-- 결과 화면 -->
+        <div id="resultOverlay" class="overlay hidden">
+            <div class="result-card">
+                <div class="result-emoji" id="resultEmoji">🎉</div>
+                <h2 id="resultTitle">게임 끝!</h2>
+                <p id="resultSub" class="result-sub"></p>
+                <ol id="rankingList" class="ranking hidden"></ol>
+                <div class="result-actions">
+                    <button type="button" id="againBtn" class="btn btn-primary btn-big">다시 하기 <span class="kbd">Enter</span></button>
+                    <button type="button" id="setupBtn" class="btn btn-ghost">설정으로</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/memory-pad.js"></script>
+</body>
+</html>

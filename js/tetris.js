@@ -20,6 +20,7 @@ const CONFIG = {
         J: '#0000ff', // blue
         L: '#ffa500', // orange
         GHOST: 'rgba(255, 255, 255, 0.3)',
+        GARBAGE: '#6b6b6b', // 방해 줄 (듀얼 모드)
         EMPTY: '#000000'
     }
 };
@@ -99,6 +100,7 @@ class GameState {
         this.isRunning = false;
         this.fallTimer = 0;
         this.lastTime = 0;
+        this.pendingGarbage = 0; // 받을 방해 줄 수 (듀얼 모드)
     }
 
     createEmptyBoard() {
@@ -120,6 +122,7 @@ class GameState {
         this.isRunning = false;
         this.fallTimer = 0;
         this.lastTime = 0;
+        this.pendingGarbage = 0; // 받을 방해 줄 수 (듀얼 모드)
     }
 }
 
@@ -177,15 +180,71 @@ class Tetromino {
     }
 }
 
+// 기본 옵션 (테트리스 단독 페이지 기준)
+// 다른 페이지(예: 낙하 블록 듀얼)에서는 생성자 옵션으로 DOM 대상·키 매핑·콜백을 바꿔 재사용한다.
+const DEFAULT_GAME_OPTIONS = {
+    // 사용할 DOM 요소 id (없는 요소는 null로 두면 무시된다)
+    ids: {
+        board: 'gameBoard',
+        next: 'nextPieceCanvas',
+        score: 'score',
+        level: 'level',
+        lines: 'lines',
+        best: 'bestScore',
+        finalScore: 'finalScore',
+        finalLines: 'finalLines',
+        newBest: 'newBestMsg',
+        startBtn: 'startBtn',
+        pauseBtn: 'pauseBtn',
+        restartBtn: 'restartBtn',
+        gameOverScreen: 'gameOverScreen',
+        pauseScreen: 'pauseScreen',
+        touchControls: 'touchControls'
+    },
+    // KeyboardEvent.code → 동작
+    keyMap: {
+        ArrowLeft: 'left',
+        ArrowRight: 'right',
+        ArrowDown: 'down',
+        ArrowUp: 'rotate',
+        Space: 'hardDrop',
+        KeyP: 'pause'
+    },
+    // 키를 누르고 있을 때 자동 반복을 무시할 동작
+    noRepeatActions: [],
+    // 최고 점수 저장 키 (null이면 저장하지 않음)
+    bestKey: 'gm_tetris_best',
+    // 보드 제스처 + 온스크린 버튼 사용 여부
+    touch: true,
+    // 창이 포커스를 잃으면 자동 일시정지
+    autoPauseOnBlur: true,
+    // 콜백
+    onLinesCleared: null, // (game, lineCount)
+    onGameOver: null      // (game)
+};
+
+// 터치 제스처 설정
+const TOUCH = {
+    TAP_MAX_TIME: 250,        // 탭으로 인정하는 최대 시간(ms)
+    TAP_MAX_MOVE: 10,         // 탭으로 인정하는 최대 이동(px)
+    AXIS_LOCK: 12,            // 이 거리 이상 움직이면 가로/세로 방향 고정(px)
+    SWIPE_MAX_TIME: 220,      // 하드 드롭 스와이프 최대 시간(ms)
+    SWIPE_MIN_CELLS: 3,       // 하드 드롭 스와이프 최소 거리(칸)
+    REPEAT_DELAY: 170,        // 버튼 길게 누를 때 반복 시작 지연(ms)
+    REPEAT_INTERVAL: 50       // 버튼 반복 간격(ms)
+};
+
 // 메인 게임 클래스
 class TetrisGame {
-    constructor() {
+    constructor(options = {}) {
+        this.options = Object.assign({}, DEFAULT_GAME_OPTIONS, options);
         this.state = new GameState();
         this.canvas = null;
         this.ctx = null;
         this.nextCanvas = null;
         this.nextCtx = null;
         this.animationId = null;
+        this.bestScore = 0;
 
         // UI 요소들
         this.elements = {};
@@ -194,81 +253,235 @@ class TetrisGame {
     }
 
     init() {
-        // Canvas 초기화
-        this.canvas = document.getElementById('gameBoard');
-        this.ctx = this.canvas.getContext('2d');
-        this.nextCanvas = document.getElementById('nextPieceCanvas');
-        this.nextCtx = this.nextCanvas.getContext('2d');
+        const ids = this.options.ids;
+        const byId = (id) => (id ? document.getElementById(id) : null);
 
-        // UI 요소 참조 저장
-        this.elements = {
-            score: document.getElementById('score'),
-            level: document.getElementById('level'),
-            lines: document.getElementById('lines'),
-            finalScore: document.getElementById('finalScore'),
-            finalLines: document.getElementById('finalLines'),
-            startBtn: document.getElementById('startBtn'),
-            pauseBtn: document.getElementById('pauseBtn'),
-            restartBtn: document.getElementById('restartBtn'),
-            gameOverScreen: document.getElementById('gameOverScreen'),
-            pauseScreen: document.getElementById('pauseScreen')
-        };
+        // Canvas 초기화
+        this.canvas = byId(ids.board);
+        this.ctx = this.canvas.getContext('2d');
+        this.nextCanvas = byId(ids.next);
+        this.nextCtx = this.nextCanvas ? this.nextCanvas.getContext('2d') : null;
+
+        // UI 요소 참조 저장 (없으면 null)
+        this.elements = {};
+        Object.keys(ids).forEach((name) => {
+            if (name !== 'board' && name !== 'next') {
+                this.elements[name] = byId(ids[name]);
+            }
+        });
+
+        this.bestScore = this.loadBestScore();
 
         // 이벤트 리스너 등록
         this.setupEventListeners();
+        if (this.options.touch) {
+            this.setupTouchControls();
+        }
 
         // 첫 게임 준비
         this.prepareNewGame();
         this.updateDisplay();
+        this.render();
     }
+
+    // 요소 표시/숨김 (요소가 없으면 무시)
+    show(el) { if (el) el.classList.remove('hidden'); }
+    hide(el) { if (el) el.classList.add('hidden'); }
 
     setupEventListeners() {
         // 키보드 이벤트
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
 
         // 버튼 이벤트
-        this.elements.startBtn.addEventListener('click', () => this.startGame());
-        this.elements.pauseBtn.addEventListener('click', () => this.togglePause());
-        this.elements.restartBtn.addEventListener('click', () => this.restartGame());
+        const { startBtn, pauseBtn, restartBtn, pauseScreen } = this.elements;
+        if (startBtn) startBtn.addEventListener('click', () => this.startGame());
+        if (pauseBtn) pauseBtn.addEventListener('click', () => this.togglePause());
+        if (restartBtn) restartBtn.addEventListener('click', () => this.restartGame());
+        // 일시정지 화면을 누르면 계속하기 (터치 기기용)
+        if (pauseScreen) pauseScreen.addEventListener('click', () => {
+            if (this.state.isPaused) this.togglePause();
+        });
 
         // 포커스 이벤트 (게임이 백그라운드로 갈 때 자동 일시정지)
-        window.addEventListener('blur', () => {
-            if (this.state.isRunning && !this.state.isPaused) {
-                this.togglePause();
-            }
-        });
+        if (this.options.autoPauseOnBlur) {
+            window.addEventListener('blur', () => {
+                if (this.state.isRunning && !this.state.isPaused) {
+                    this.togglePause();
+                }
+            });
+        }
     }
 
     // 키보드 입력 처리
     handleKeyPress(e) {
         if (!this.state.isRunning || this.state.isGameOver) return;
 
-        switch (e.code) {
-            case 'ArrowLeft':
-                e.preventDefault();
+        const action = this.options.keyMap[e.code];
+        if (!action) return;
+
+        e.preventDefault();
+        if (e.repeat && this.options.noRepeatActions.includes(action)) return;
+        this.performAction(action);
+    }
+
+    // 동작 실행 (키보드·터치 공통)
+    performAction(action) {
+        if (action === 'pause') {
+            this.togglePause();
+            return;
+        }
+        if (!this.state.isRunning || this.state.isPaused || this.state.isGameOver) return;
+
+        switch (action) {
+            case 'left':
                 this.movePiece(-1, 0);
                 break;
-            case 'ArrowRight':
-                e.preventDefault();
+            case 'right':
                 this.movePiece(1, 0);
                 break;
-            case 'ArrowDown':
-                e.preventDefault();
+            case 'down':
                 this.movePiece(0, 1);
                 break;
-            case 'ArrowUp':
-                e.preventDefault();
+            case 'rotate':
                 this.rotatePiece();
                 break;
-            case 'Space':
-                e.preventDefault();
+            case 'hardDrop':
                 this.hardDrop();
                 break;
-            case 'KeyP':
-                e.preventDefault();
-                this.togglePause();
-                break;
         }
+    }
+
+    // 터치 조작: 보드 제스처 + 온스크린 버튼
+    setupTouchControls() {
+        this.canvas.style.touchAction = 'none';
+
+        let gesture = null;
+
+        const cellSize = () => this.canvas.getBoundingClientRect().width / CONFIG.BOARD_WIDTH;
+
+        this.canvas.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse') return; // 마우스는 키보드 사용
+            e.preventDefault();
+            this.canvas.setPointerCapture(e.pointerId);
+            gesture = {
+                id: e.pointerId,
+                startX: e.clientX,
+                startY: e.clientY,
+                anchorX: e.clientX,
+                anchorY: e.clientY,
+                startTime: performance.now(),
+                axis: null,
+                moved: false
+            };
+        });
+
+        this.canvas.addEventListener('pointermove', (e) => {
+            if (!gesture || e.pointerId !== gesture.id) return;
+            if (!this.state.isRunning || this.state.isPaused) return;
+
+            const totalDx = e.clientX - gesture.startX;
+            const totalDy = e.clientY - gesture.startY;
+
+            // 방향 고정: 처음 크게 움직인 축으로만 조작
+            if (!gesture.axis) {
+                if (Math.abs(totalDx) < TOUCH.AXIS_LOCK && Math.abs(totalDy) < TOUCH.AXIS_LOCK) return;
+                gesture.axis = Math.abs(totalDx) >= Math.abs(totalDy) ? 'x' : 'y';
+            }
+
+            const size = cellSize();
+            if (gesture.axis === 'x') {
+                // 좌우 드래그: 손가락이 한 칸 움직일 때마다 한 칸 이동
+                let steps = Math.trunc((e.clientX - gesture.anchorX) / size);
+                while (steps !== 0) {
+                    this.performAction(steps > 0 ? 'right' : 'left');
+                    gesture.anchorX += (steps > 0 ? 1 : -1) * size;
+                    steps += steps > 0 ? -1 : 1;
+                    gesture.moved = true;
+                }
+            } else {
+                // 아래로 드래그: 소프트 드롭
+                let steps = Math.trunc((e.clientY - gesture.anchorY) / size);
+                while (steps > 0) {
+                    this.performAction('down');
+                    gesture.anchorY += size;
+                    steps--;
+                    gesture.moved = true;
+                }
+            }
+            this.render();
+        });
+
+        const endGesture = (e) => {
+            if (!gesture || e.pointerId !== gesture.id) return;
+            const g = gesture;
+            gesture = null;
+            if (e.type === 'pointercancel') return;
+
+            const dt = performance.now() - g.startTime;
+            const dx = e.clientX - g.startX;
+            const dy = e.clientY - g.startY;
+
+            // 게임 시작 전이면 탭으로 시작
+            if (!this.state.isRunning && !this.state.isGameOver) {
+                if (dt < TOUCH.TAP_MAX_TIME * 2) this.startGame();
+                return;
+            }
+
+            if (g.axis === 'y' && dt < TOUCH.SWIPE_MAX_TIME && dy > cellSize() * TOUCH.SWIPE_MIN_CELLS) {
+                // 빠른 아래 스와이프: 하드 드롭
+                this.performAction('hardDrop');
+            } else if (!g.moved && dt < TOUCH.TAP_MAX_TIME &&
+                       Math.abs(dx) < TOUCH.TAP_MAX_MOVE && Math.abs(dy) < TOUCH.TAP_MAX_MOVE) {
+                // 탭: 회전
+                this.performAction('rotate');
+            }
+            this.render();
+        };
+        this.canvas.addEventListener('pointerup', endGesture);
+        this.canvas.addEventListener('pointercancel', endGesture);
+
+        // 온스크린 버튼
+        const pad = this.elements.touchControls;
+        if (!pad) return;
+        pad.style.touchAction = 'none';
+
+        const repeatable = ['left', 'right', 'down'];
+        pad.querySelectorAll('[data-action]').forEach((btn) => {
+            const action = btn.dataset.action;
+            let delayTimer = null;
+            let repeatTimer = null;
+            const stop = () => {
+                clearTimeout(delayTimer);
+                clearInterval(repeatTimer);
+                delayTimer = repeatTimer = null;
+                btn.classList.remove('pressed');
+            };
+
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault(); // 포커스·더블탭 확대 방지
+                btn.classList.add('pressed');
+
+                if (action === 'pause' && !this.state.isRunning) {
+                    this.startGame(); // 게임 전/게임 오버 상태면 시작
+                    return;
+                }
+                this.performAction(action);
+                this.render();
+
+                if (repeatable.includes(action)) {
+                    delayTimer = setTimeout(() => {
+                        repeatTimer = setInterval(() => {
+                            this.performAction(action);
+                            this.render();
+                        }, TOUCH.REPEAT_INTERVAL);
+                    }, TOUCH.REPEAT_DELAY);
+                }
+            });
+            btn.addEventListener('pointerup', stop);
+            btn.addEventListener('pointercancel', stop);
+            btn.addEventListener('pointerleave', stop);
+            btn.addEventListener('contextmenu', (e) => e.preventDefault());
+        });
     }
 
     // 새 게임 준비
@@ -284,15 +497,21 @@ class TetrisGame {
             this.prepareNewGame();
         }
 
+        // 중복 루프 방지
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+
         this.state.isRunning = true;
         this.state.isPaused = false;
         this.state.lastTime = performance.now();
 
         // UI 업데이트
-        this.elements.startBtn.classList.add('hidden');
-        this.elements.pauseBtn.classList.remove('hidden');
-        this.elements.gameOverScreen.classList.add('hidden');
-        this.elements.pauseScreen.classList.add('hidden');
+        this.hide(this.elements.startBtn);
+        this.show(this.elements.pauseBtn);
+        this.hide(this.elements.gameOverScreen);
+        this.hide(this.elements.pauseScreen);
 
         this.gameLoop();
     }
@@ -303,6 +522,16 @@ class TetrisGame {
         this.startGame();
     }
 
+    // 게임 정지 (게임 오버 처리 없이 루프만 멈춤 — 듀얼에서 승자 보드 정지용)
+    stop() {
+        this.state.isRunning = false;
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        this.render();
+    }
+
     // 일시정지 토글
     togglePause() {
         if (!this.state.isRunning || this.state.isGameOver) return;
@@ -310,12 +539,12 @@ class TetrisGame {
         this.state.isPaused = !this.state.isPaused;
 
         if (this.state.isPaused) {
-            this.elements.pauseScreen.classList.remove('hidden');
+            this.show(this.elements.pauseScreen);
             if (this.animationId) {
                 cancelAnimationFrame(this.animationId);
             }
         } else {
-            this.elements.pauseScreen.classList.add('hidden');
+            this.hide(this.elements.pauseScreen);
             this.state.lastTime = performance.now();
             this.gameLoop();
         }
@@ -323,7 +552,7 @@ class TetrisGame {
 
     // 메인 게임 루프
     gameLoop(currentTime = performance.now()) {
-        if (this.state.isPaused || this.state.isGameOver) return;
+        if (!this.state.isRunning || this.state.isPaused || this.state.isGameOver) return;
 
         const deltaTime = currentTime - this.state.lastTime;
         this.state.lastTime = currentTime;
@@ -338,6 +567,7 @@ class TetrisGame {
         }
 
         this.render();
+        if (!this.state.isRunning || this.state.isGameOver) return;
         this.animationId = requestAnimationFrame((time) => this.gameLoop(time));
     }
 
@@ -475,8 +705,50 @@ class TetrisGame {
         // 라인 클리어 체크
         this.clearLines();
 
+        // 대기 중인 방해 줄 반영 (단독 모드에서는 항상 0)
+        this.applyPendingGarbage();
+        if (this.state.isGameOver) return;
+
         // 새 블록 생성
         this.spawnNewPiece();
+    }
+
+    // 방해 줄 받기 (다음 블록이 고정될 때 바닥에서 올라온다)
+    receiveGarbage(count) {
+        if (count > 0) this.state.pendingGarbage += count;
+    }
+
+    // 대기 방해 줄 상쇄 (내가 줄을 지웠을 때) — 상쇄하고 남은 공격량 반환
+    cancelGarbage(amount) {
+        const cancelled = Math.min(amount, this.state.pendingGarbage);
+        this.state.pendingGarbage -= cancelled;
+        return amount - cancelled;
+    }
+
+    // 대기 중인 방해 줄을 보드 바닥에 삽입
+    applyPendingGarbage() {
+        const count = this.state.pendingGarbage;
+        if (count <= 0) return;
+        this.state.pendingGarbage = 0;
+
+        // 한 번에 들어오는 방해 줄은 같은 열에 구멍 하나
+        const hole = Math.floor(Math.random() * CONFIG.BOARD_WIDTH);
+        let toppedOut = false;
+
+        for (let i = 0; i < count; i++) {
+            // 맨 윗줄을 밀어내고, 거기에 블록이 있었다면 꼭대기를 넘은 것
+            const removed = this.state.board.shift();
+            if (removed.some(cell => cell !== CONFIG.COLORS.EMPTY)) {
+                toppedOut = true;
+            }
+            const row = Array(CONFIG.BOARD_WIDTH).fill(CONFIG.COLORS.GARBAGE);
+            row[hole] = CONFIG.COLORS.EMPTY;
+            this.state.board.push(row);
+        }
+
+        if (toppedOut) {
+            this.gameOver();
+        }
     }
 
     // 완성된 라인 제거
@@ -509,6 +781,10 @@ class TetrisGame {
         }
 
         this.updateDisplay();
+
+        if (typeof this.options.onLinesCleared === 'function') {
+            this.options.onLinesCleared(this, linesToClear.length);
+        }
     }
 
     // 점수 계산 (테트리스 표준 점수 시스템)
@@ -517,21 +793,54 @@ class TetrisGame {
         this.state.score += basePoints[linesCleared] * this.state.level;
     }
 
+    // 최고 점수 불러오기/저장 (localStorage를 못 쓰는 환경이면 0)
+    loadBestScore() {
+        if (!this.options.bestKey) return 0;
+        try {
+            return parseInt(localStorage.getItem(this.options.bestKey), 10) || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    saveBestScore() {
+        if (!this.options.bestKey || this.state.score <= this.bestScore) return false;
+        this.bestScore = this.state.score;
+        try {
+            localStorage.setItem(this.options.bestKey, String(this.bestScore));
+        } catch (e) {
+            // 저장 실패는 무시 (이번 세션 동안은 표시됨)
+        }
+        return true;
+    }
+
     // 게임 오버
     gameOver() {
+        if (this.state.isGameOver) return;
         this.state.isGameOver = true;
         this.state.isRunning = false;
 
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
+            this.animationId = null;
         }
 
+        const isNewBest = this.saveBestScore();
+        this.updateDisplay();
+        this.render();
+
         // 최종 점수 표시
-        this.elements.finalScore.textContent = this.state.score;
-        this.elements.finalLines.textContent = this.state.lines;
-        this.elements.gameOverScreen.classList.remove('hidden');
-        this.elements.pauseBtn.classList.add('hidden');
-        this.elements.startBtn.classList.remove('hidden');
+        const { finalScore, finalLines, newBest } = this.elements;
+        if (finalScore) finalScore.textContent = this.state.score;
+        if (finalLines) finalLines.textContent = this.state.lines;
+        if (isNewBest) this.show(newBest); else this.hide(newBest);
+        this.show(this.elements.gameOverScreen);
+        this.hide(this.elements.pauseBtn);
+        this.show(this.elements.startBtn);
+
+        if (typeof this.options.onGameOver === 'function') {
+            this.options.onGameOver(this);
+        }
     }
 
     // 화면 렌더링
@@ -568,6 +877,8 @@ class TetrisGame {
 
     // 다음 블록 미리보기 렌더링
     renderNextPiece() {
+        if (!this.nextCtx) return;
+
         // 배경 클리어
         this.nextCtx.fillStyle = CONFIG.COLORS.EMPTY;
         this.nextCtx.fillRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
@@ -630,15 +941,19 @@ class TetrisGame {
 
     // UI 표시 업데이트
     updateDisplay() {
-        this.elements.score.textContent = this.state.score;
-        this.elements.level.textContent = this.state.level;
-        this.elements.lines.textContent = this.state.lines;
+        const { score, level, lines, best } = this.elements;
+        if (score) score.textContent = this.state.score;
+        if (level) level.textContent = this.state.level;
+        if (lines) lines.textContent = this.state.lines;
+        if (best) best.textContent = Math.max(this.bestScore, this.state.score);
     }
 }
 
-// 게임 초기화
+// 게임 초기화 (테트리스 단독 페이지에서만 자동 생성)
 let game;
 
 document.addEventListener('DOMContentLoaded', () => {
-    game = new TetrisGame();
+    if (document.getElementById(DEFAULT_GAME_OPTIONS.ids.board)) {
+        game = new TetrisGame();
+    }
 });

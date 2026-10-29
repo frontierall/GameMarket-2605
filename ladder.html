@@ -535,6 +535,7 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="js/roster.js"></script>
   <script>
     // ─── Constants ───────────────────────────────────────────────
     const RESULTS_SESSION_KEY = 'ladderResults';
@@ -1130,10 +1131,7 @@
     }
 
     // ─── Count Control ───────────────────────────────────────────
-    function resizeArr(arr, n, fill) {
-      while (arr.length > n) arr.pop();
-      for (let i = arr.length; i < n; i++) arr.push(fill(i));
-    }
+    const resizeArr = Roster.resize;
 
     // 발표순서 개수를 참가자 수에 맞춘다 (이름은 그대로 유지)
     function syncOutcomes() {
@@ -1142,7 +1140,7 @@
     }
 
     function setCount(n) {
-      n = Math.max(MIN_COUNT, Math.min(MAX_COUNT, n));
+      n = Roster.clamp(n, MIN_COUNT, MAX_COUNT);
       resizeArr(players,  n, i => `참가자 ${i + 1}`);
       resizeArr(outcomes, n, i => `${i + 1}번`);
       generateLadder();
@@ -1151,91 +1149,17 @@
       drawStaticLadder();
     }
 
+    // 인원수 빠른 선택 칩 — 명단 파싱·칩 UI는 js/roster.js
+    const countPicker = Roster.countPicker(document.getElementById('countPicker'), {
+      min: MIN_COUNT, max: MAX_COUNT,
+      onPick: n => {
+        setCount(n);
+        showToast(`${players.length}명으로 맞췄습니다`, 'success');
+      }
+    });
+
     function renderCountPicker() {
-      document.querySelectorAll('#countPicker .count-chip').forEach(chip => {
-        chip.classList.toggle('active', Number(chip.dataset.n) === players.length);
-      });
-    }
-
-    (function buildCountPicker() {
-      const wrap = document.getElementById('countPicker');
-      for (let n = MIN_COUNT; n <= MAX_COUNT; n++) {
-        const chip = document.createElement('button');
-        chip.className = 'count-chip';
-        chip.dataset.n = n;
-        chip.textContent = n;
-        chip.title = `${n}명으로 맞추기`;
-        chip.addEventListener('click', () => {
-          setCount(n);
-          showToast(`${players.length}명으로 맞췄습니다`, 'success');
-        });
-        wrap.appendChild(chip);
-      }
-    })();
-
-    // ─── Roster Parsing ──────────────────────────────────────────
-    const DEPT_RE = /(팀|부서|본부|센터|그룹|지점|파트|실|과|국|처)$/;
-    const TITLES = new Set([
-      '사원','주임','대리','과장','차장','부장','이사','상무','전무','대표',
-      '팀장','실장','본부장','파트장','선임','책임','수석','인턴','신입',
-      '학생','교수','선생','강사','매니저','리더','참가자','이름','성명','번호',
-      '순번','연번','직급','직책','소속','구분','비고','합계','총원','명단'
-    ]);
-    // 스프레드시트 헤더가 이름으로 잡히는 걸 막는다
-    const EN_STOP = new Set([
-      'no','num','id','name','names','dept','team','order','rank','seq','index',
-      'member','members','participant','email','mail','phone','tel','total','list'
-    ]);
-
-    // 한 줄에서 이름만 뽑아낸다. 못 찾으면 빈 문자열.
-    function extractName(raw) {
-      let t = String(raw);
-      t = t.replace(/\S+@\S+/g, ' ');                                 // 이메일
-      t = t.replace(/\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{4}/g, ' ');       // 전화번호
-      t = t.replace(/[（(\[{<][^）)\]}>]*[）)\]}>]/g, ' ');             // 괄호 안 내용
-      t = t.replace(/^\s*(?:\d+\s*[.)\]:\-]?\s*|[-–—•*·▪◦]\s*)+/, '');  // 앞 번호·불릿
-      t = t.replace(/\s+/g, ' ').trim();
-      if (!t) return '';
-
-      const chunks = t.match(/[가-힣]{2,6}/g);
-      if (chunks) {
-        const hit = chunks.find(c => !DEPT_RE.test(c) && !TITLES.has(c));
-        if (hit) {
-          const stripped = hit.replace(/(님|씨|군|양)$/, '');
-          return stripped.length >= 2 ? stripped : hit;
-        }
-        return '';
-      }
-      const en = t.match(/[A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*)?/);
-      if (!en) return '';
-      const name = en[0].replace(/[.'-]+$/, '').trim();
-      if (name.length < 2) return '';
-      return EN_STOP.has(name.toLowerCase().replace(/\s+/g, '')) ? '' : name;
-    }
-
-    // 여러 줄이면 한 줄 = 한 사람(쉼표·탭은 부서/연락처 같은 다음 칸)으로 보고,
-    // 한 줄뿐이면 쉼표로 이어 쓴 명단으로 본다.
-    function parseRoster(text) {
-      const lines = String(text).split(/\r?\n/).filter(l => l.trim());
-      const multiLine = lines.length > 1;
-      const names = [];
-
-      // "김민준 이서연 박지호"처럼 한 줄에 이름만 띄어 쓴 경우
-      if (lines.length === 1 && !/[,;|\t]/.test(lines[0])) {
-        const tokens = lines[0].trim().split(/\s+/);
-        if (tokens.length >= 2 && tokens.every(t => /^[가-힣]{2,4}$/.test(t))) return tokens;
-      }
-
-      lines.forEach(line => {
-        const parts = line.split(/[,;|\t]/);
-        for (const part of parts) {
-          const name = extractName(part);
-          if (!name) continue;
-          names.push(name);
-          if (multiLine) break; // 한 줄에서 이름은 하나만
-        }
-      });
-      return names;
+      countPicker.update(players.length);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────
@@ -1279,56 +1203,36 @@
       showToast(autoSync ? '발표순서를 참가자 수에 맞춥니다' : '발표순서를 직접 조절합니다', 'success');
     });
 
-    document.getElementById('rosterToggle').addEventListener('click', e => {
-      const box = document.getElementById('rosterBox');
-      box.hidden = !box.hidden;
-      e.currentTarget.classList.toggle('active', !box.hidden);
-      if (!box.hidden) document.getElementById('rosterInput').focus();
-    });
+    Roster.pasteBox({
+      input:     document.getElementById('rosterInput'),
+      hint:      document.getElementById('rosterHint'),
+      applyBtn:  document.getElementById('rosterApplyBtn'),
+      clearBtn:  document.getElementById('rosterClearBtn'),
+      toggleBtn: document.getElementById('rosterToggle'),
+      box:       document.getElementById('rosterBox'),
+      max: MAX_COUNT,
+      onApply: found => {
+        if (found.length < MIN_COUNT) {
+          showToast(`이름을 ${MIN_COUNT}개 이상 찾지 못했습니다`); return;
+        }
+        const over = Math.max(0, found.length - MAX_COUNT);
+        const list = found.slice(0, MAX_COUNT);
 
-    document.getElementById('rosterClearBtn').addEventListener('click', () => {
-      const input = document.getElementById('rosterInput');
-      input.value = '';
-      input.dispatchEvent(new Event('input'));
-      input.focus();
-    });
+        cancelAnimationFrame(animationId);
+        players  = list.slice();
+        outcomes = list.map((_, i) => `${i + 1}번`);
+        setRevealMode(false);
+        clearResults();
+        getAllBtns().forEach(b => b.disabled = false);
 
-    document.getElementById('rosterInput').addEventListener('input', e => {
-      const found = parseRoster(e.target.value).length;
-      const hint = document.getElementById('rosterHint');
-      if (!found) {
-        hint.textContent = '번호·부서·직급·연락처는 걸러내고 이름만 뽑습니다';
-        hint.style.color = '';
-      } else {
-        hint.textContent = found > MAX_COUNT
-          ? `이름 ${found}개 인식 — 앞에서 ${MAX_COUNT}명만 적용됩니다`
-          : `이름 ${found}개 인식됨`;
-        hint.style.color = found > MAX_COUNT ? 'var(--neon-pink)' : 'var(--neon-green)';
+        generateLadder();
+        renderCards();
+        drawStaticLadder();
+        showToast(
+          over ? `${list.length}명 적용 (최대 ${MAX_COUNT}명, ${over}명 제외)` : `${list.length}명 적용됐습니다`,
+          over ? 'error' : 'success'
+        );
       }
-    });
-
-    document.getElementById('rosterApplyBtn').addEventListener('click', () => {
-      const found = parseRoster(document.getElementById('rosterInput').value);
-      if (found.length < MIN_COUNT) {
-        showToast(`이름을 ${MIN_COUNT}개 이상 찾지 못했습니다`); return;
-      }
-      const over = Math.max(0, found.length - MAX_COUNT);
-      const list = found.slice(0, MAX_COUNT);
-
-      cancelAnimationFrame(animationId);
-      players  = list.slice();
-      outcomes = list.map((_, i) => `${i + 1}번`);
-      setRevealMode(false);
-      clearResults();
-      getAllBtns().forEach(b => b.disabled = false);
-
-      generateLadder();
-      renderCards();
-      drawStaticLadder();
-      showToast(
-        over ? `${list.length}명 적용 (최대 ${MAX_COUNT}명, ${over}명 제외)` : `${list.length}명 적용됐습니다`,
-        over ? 'error' : 'success'
-      );
     });
 
     document.getElementById('startGameBtn').addEventListener('click', () => {

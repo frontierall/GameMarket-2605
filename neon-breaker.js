@@ -1245,24 +1245,26 @@ window.addEventListener('keyup', e => {
     if (e.code === 'Space') isSpacePressed = false;
 });
 
-// Mouse/Touch controls
-canvas.addEventListener('mousemove', e => {
-    if (gameState !== STATES.PLAYING) return;
-    
-    // Find canvas relative offset
+// Mouse/Touch controls (Pointer Events: mouse, touch drag, pen)
+// Converts client coordinates into canvas coordinates, accounting for CSS scaling
+function pointerToCanvasX(e) {
     const rect = canvas.getBoundingClientRect();
-    const root = document.documentElement;
-    const mouseX = e.clientX - rect.left - root.scrollLeft;
-    
-    paddle.x = mouseX - paddle.width / 2;
-    
+    if (!rect.width) return paddle.x + paddle.width / 2;
+    const scaleX = canvas.width / rect.width;
+    return (e.clientX - rect.left) * scaleX;
+}
+
+function movePaddleToPointer(e) {
+    if (gameState !== STATES.PLAYING) return;
+
+    paddle.x = pointerToCanvasX(e) - paddle.width / 2;
+
     // Keep paddle inside canvas borders
     if (paddle.x < 0) paddle.x = 0;
     if (paddle.x + paddle.width > canvas.width) paddle.x = canvas.width - paddle.width;
-});
+}
 
-canvas.addEventListener('click', () => {
-    // Launch ball on canvas click too
+function launchOrFire() {
     if (gameState === STATES.PLAYING && isBallAttached && balls.length > 0) {
         isBallAttached = false;
         balls[0].dx = (Math.random() - 0.5) * 2;
@@ -1271,6 +1273,22 @@ canvas.addEventListener('click', () => {
     } else if (gameState === STATES.PLAYING && activePowerupTimers.LASER > 0) {
         fireLasers();
     }
+}
+
+canvas.addEventListener('pointermove', movePaddleToPointer);
+
+canvas.addEventListener('pointerdown', e => {
+    sounds.resume();
+    movePaddleToPointer(e);
+    // Keep receiving moves while the finger drags outside the canvas
+    if (e.pointerType !== 'mouse' && canvas.setPointerCapture) {
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    }
+});
+
+// Launch ball / fire laser on click or tap
+canvas.addEventListener('click', () => {
+    launchOrFire();
 });
 
 // Menu Button events
