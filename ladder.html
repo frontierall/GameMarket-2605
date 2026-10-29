@@ -220,6 +220,10 @@
       color: var(--neon-pink); box-shadow: 0 0 20px rgba(255,0,110,0.15);
     }
     .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    /* 공이 내려가는 동안에는 명단·인원을 바꿀 수 없다 */
+    body.is-animating .setup-bar,
+    body.is-animating .roster-box,
+    body.is-animating .panel { pointer-events: none; opacity: 0.55; }
 
     /* Speed slider */
     .speed-bar {
@@ -534,6 +538,7 @@
   <script>
     // ─── Constants ───────────────────────────────────────────────
     const RESULTS_SESSION_KEY = 'ladderResults';
+    const LADDER_SESSION_KEY  = 'ladderRungs';
     const NAMES_SESSION_KEY   = 'ladderNames';
     const NAMES_LOCAL_KEY     = 'ladderNamesPersist';
     const SYNC_KEY            = 'ladderAutoSync';
@@ -554,7 +559,9 @@
     let dragSrcIndex = null;
     let dragType = null;
     let revealMode = false;
-    let lastPaths = null;
+    let lastResults = null; // 마지막 게임 결과 [{name, outcome, color}]
+    let isAnimating = false;
+    let anim = null;        // 진행 중 애니메이션 { paths, pos, idx }
     let autoSync = localStorage.getItem(SYNC_KEY) !== 'off';
 
     // ─── Canvas ──────────────────────────────────────────────────
@@ -566,11 +573,16 @@
       canvas.height = canvas.offsetHeight;
     }
 
-    // 인원이 적으면 가로줄을 놓을 행이 부족해 결과가 한쪽으로 치우친다.
-    // (기존 n*2-1행은 3명일 때 5행뿐 — 제자리 비율이 균등값 33%에 한참 못 미쳤다)
-    // 최소 11행을 보장하면 3~5명 구간의 결과 분포가 균등에 훨씬 가까워진다.
+    // 가로줄을 무작위로만 깔면 행이 부족하고 왼쪽 열부터 채워져서 결과가
+    // '제자리 근처'로 쏠린다 (10명 기준 한 결과가 1%~21%).
+    // 그래서 위쪽 randomRows행은 보기 좋게 무작위로 깔고, 아래쪽 n행에서
+    // 미리 뽑아 둔 균등 순열에 맞춰 준다 — 결과 분포는 항상 정확히 균등하다.
+    function getRandomRows(n) {
+      return Math.max(n, 6);
+    }
+
     function getNumRows(n) {
-      return Math.max(n * 2 - 1, 11);
+      return getRandomRows(n) + n;
     }
 
     function getLadderMetrics() {
@@ -589,41 +601,95 @@
     }
 
     // ─── Ladder Generation ───────────────────────────────────────
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
     function generateLadder() {
-      ladderRungs = [];
       const n = players.length;
+      const randomRows = getRandomRows(n);
+      const RUNG_CHANCE = 0.45;
+      let rowUsage;
+      const place = (r, c) => {
+        const used = rowUsage[r];
+        if (used.has(c) || used.has(c + 1)) return false;
+        used.add(c); used.add(c + 1);
+        ladderRungs.push({ row: r, startCol: c, endCol: c + 1 });
+        return true;
+      };
+
+      // 1) 장식용 무작위 구간 — 칸 순서를 섞어 왼쪽 열부터 채워지는 편향을 없앤다.
+      //    모든 열 쌍에 가로줄이 하나도 못 들어가면 (드물다) 다시 깐다.
+      const cells = [];
+      for (let r = 0; r < randomRows; r++) {
+        for (let c = 0; c < n - 1; c++) cells.push([r, c]);
+      }
+      const hasPair = c => ladderRungs.some(g => g.startCol === c);
+      do {
+        ladderRungs = [];
+        rowUsage = Array.from({ length: getNumRows(n) }, () => new Set());
+        shuffle(cells).forEach(([r, c]) => { if (Math.random() < RUNG_CHANCE) place(r, c); });
+        for (let c = 0; c < n - 1; c++) {
+          if (hasPair(c)) continue;
+          for (const r of shuffle([...Array(randomRows).keys()])) if (place(r, c)) break;
+        }
+      } while (cells.length && [...Array(n - 1).keys()].some(c => !hasPair(c)));
+
+      // 2) 지금까지 내려왔을 때 각 열에 누가 와 있는지
+      const at = Array(n);
+      getFinalCols(n).forEach((col, p) => { at[col] = p; });
+
+      // 3) 도착 열을 균등 순열로 먼저 뽑고, 홀짝 전치 정렬로 맞춘다 (n행이면 충분)
+      const target = shuffle([...Array(n).keys()]);
+      for (let k = 0; k < n; k++) {
+        for (let c = k % 2; c < n - 1; c += 2) {
+          if (target[at[c]] > target[at[c + 1]]) {
+            place(randomRows + k, c);
+            [at[c], at[c + 1]] = [at[c + 1], at[c]];
+          }
+        }
+      }
+      saveLadder();
+    }
+
+    // 가로줄만 보고 각 참가자가 도착하는 열을 계산한다 (화면 크기와 무관)
+    function getFinalCols(n = players.length) {
       const numRows = getNumRows(n);
-      const RUNG_CHANCE = 0.55; // 모든 인원 구간에서 0.4보다 고르게 섞인다
-      const rowUsage = new Map();
-      for (let r = 0; r < numRows; r++) rowUsage.set(r, new Set());
-
-      for (let c = 0; c < n - 1; c++) {
-        for (let r = 0; r < numRows; r++) {
-          if (Math.random() < RUNG_CHANCE) {
-            const used = rowUsage.get(r);
-            if (!used.has(c) && !used.has(c + 1)) {
-              used.add(c); used.add(c + 1);
-              ladderRungs.push({ row: r, startCol: c, endCol: c + 1 });
-            }
-          }
+      return Array.from({ length: n }, (_, p) => {
+        let col = p;
+        for (let row = 0; row < numRows; row++) {
+          const g = ladderRungs.find(g => g.row === row && (g.startCol === col || g.endCol === col));
+          if (g) col = g.startCol === col ? g.endCol : g.startCol;
         }
-      }
+        return col;
+      });
+    }
 
-      // Guarantee at least one rung per column pair
-      for (let c = 0; c < n - 1; c++) {
-        if (!ladderRungs.some(r => r.startCol === c)) {
-          let tries = 0;
-          while (tries++ < numRows * 4) {
-            const r = Math.floor(Math.random() * numRows);
-            const used = rowUsage.get(r);
-            if (!used.has(c) && !used.has(c + 1)) {
-              used.add(c); used.add(c + 1);
-              ladderRungs.push({ row: r, startCol: c, endCol: c + 1 });
-              break;
-            }
-          }
-        }
-      }
+    function saveLadder() {
+      try {
+        sessionStorage.setItem(LADDER_SESSION_KEY, JSON.stringify({ n: players.length, rungs: ladderRungs }));
+      } catch (e) { /* 저장 불가 환경은 무시 */ }
+    }
+
+    // 새로고침 전 사다리를 되살린다. 인원이 다르거나 형식이 맞지 않으면 false
+    function restoreLadder() {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(LADDER_SESSION_KEY));
+        const n = players.length, numRows = getNumRows(n);
+        if (!saved || saved.n !== n || !Array.isArray(saved.rungs)) return false;
+        const valid = saved.rungs.every(g =>
+          Number.isInteger(g.row) && g.row >= 0 && g.row < numRows &&
+          Number.isInteger(g.startCol) && g.startCol >= 0 &&
+          g.endCol === g.startCol + 1 && g.endCol < n
+        );
+        if (!valid) return false;
+        ladderRungs = saved.rungs;
+        return true;
+      } catch (e) { return false; }
     }
 
     // ─── Draw ────────────────────────────────────────────────────
@@ -814,19 +880,28 @@
 
     function getSpeed() { return SPEED_MAP[speedSlider.value]; }
 
-    function animatePaths(paths) {
-      cancelAnimationFrame(animationId);
-      lastPaths = paths;
-      const pos = paths.map(p => ({ x: p[0].x, y: p[0].y }));
-      const idx  = Array(players.length).fill(0);
-      const btns = getAllBtns();
+    function setAnimating(on) {
+      isAnimating = on;
+      document.body.classList.toggle('is-animating', on);
+      document.querySelectorAll(
+        '.setup-bar input, .setup-bar button, .roster-box textarea, .roster-box button, .panel input, .panel button'
+      ).forEach(el => { el.disabled = on; });
+      getAllBtns().forEach(b => { b.disabled = on; });
+      if (!on) renderCards(); // 추가 버튼 활성 상태를 인원 기준으로 되돌린다
+    }
 
-      document.getElementById('resultsList').innerHTML = '';
-      document.getElementById('resultsSection').style.display = 'none';
-      btns.forEach(b => b.disabled = true);
+    function animateGame() {
+      cancelAnimationFrame(animationId);
+      // 시작 시점의 명단과 사다리로 결과를 미리 확정한다
+      const results = calcResultData();
+      const paths = getPlayerPaths();
+      anim = { paths, pos: paths.map(p => ({ ...p[0] })), idx: Array(paths.length).fill(0) };
+      clearResults();
+      setAnimating(true);
 
       (function step() {
         const speed = getSpeed();
+        const { paths, pos, idx } = anim;
         drawStaticLadder();
         let done = true;
 
@@ -843,26 +918,42 @@
           drawBall(p.x, p.y, i);
         });
 
-        if (!done) { animationId = requestAnimationFrame(step); }
-        else { displayResults(paths); btns.forEach(b => b.disabled = false); }
+        if (!done) { animationId = requestAnimationFrame(step); return; }
+        anim = null;
+        try { showResults(results); } finally { setAnimating(false); }
       })();
     }
 
     // ─── Results ─────────────────────────────────────────────────
-    function calcResultData(paths) {
-      const { gapX } = getLadderMetrics();
-      return players.map((name, i) => {
-        const finalX = paths[i][paths[i].length - 1].x;
-        let col = Math.round(finalX / gapX) - 1;
-        col = Math.max(0, Math.min(col, outcomes.length - 1));
-        return { name, outcome: outcomes[col], color: COLORS[i % COLORS.length] };
-      });
+    function calcResultData() {
+      const cols = getFinalCols();
+      return players.map((name, i) => ({
+        name: name.trim(),
+        outcome: outcomes[cols[i]].trim(),
+        color: COLORS[i % COLORS.length]
+      }));
     }
 
-    function displayResults(paths) {
-      const data = calcResultData(paths);
-      sessionStorage.setItem(RESULTS_SESSION_KEY, JSON.stringify(data));
+    function showResults(data) {
+      lastResults = data;
+      try { sessionStorage.setItem(RESULTS_SESSION_KEY, JSON.stringify(data)); } catch (e) {}
       renderResults(data, true);
+    }
+
+    // 명단·사다리가 바뀌면 이전 결과는 더 이상 맞지 않으므로 지운다
+    function clearResults() {
+      lastResults = null;
+      try { sessionStorage.removeItem(RESULTS_SESSION_KEY); } catch (e) {}
+      document.getElementById('resultsList').innerHTML = '';
+      document.getElementById('resultsSection').style.display = 'none';
+    }
+
+    function setRevealMode(on) {
+      revealMode = on;
+      const btn = document.getElementById('revealModeBtn');
+      btn.textContent = on ? '👁 전체 공개' : '🙈 순차 공개';
+      btn.style.color = on ? 'var(--neon-green)' : '';
+      btn.style.borderColor = on ? 'rgba(0,200,100,0.4)' : '';
     }
 
     function renderResults(data, animate) {
@@ -875,13 +966,14 @@
       data.forEach((d, i) => {
         const el = document.createElement('div');
         el.className = 'result-item' + (revealMode ? ' hidden-result' : '');
-        el.style.borderLeftColor = d.color;
+        const color = COLORS.includes(d.color) ? d.color : COLORS[i % COLORS.length];
+        el.style.borderLeftColor = color;
         if (animate) el.style.animationDelay = `${i * 80}ms`;
         el.innerHTML = `
           <div class="result-rank"># ${i + 1}</div>
-          <div class="result-name">${d.name}</div>
+          <div class="result-name">${escHtml(d.name)}</div>
           <div class="result-arrow">▼</div>
-          <div class="result-outcome" style="color:${d.color}">${d.outcome}</div>
+          <div class="result-outcome" style="color:${color}">${escHtml(d.outcome)}</div>
         `;
 
         if (revealMode) {
@@ -906,20 +998,14 @@
 
     // ─── Reveal Mode Toggle ──────────────────────────────────────
     document.getElementById('revealModeBtn').addEventListener('click', () => {
-      revealMode = !revealMode;
-      const btn = document.getElementById('revealModeBtn');
-      btn.textContent = revealMode ? '👁 전체 공개' : '🙈 순차 공개';
-      btn.style.color = revealMode ? 'var(--neon-green)' : '';
-      btn.style.borderColor = revealMode ? 'rgba(0,200,100,0.4)' : '';
-      if (lastPaths) displayResults(lastPaths);
+      setRevealMode(!revealMode);
+      if (lastResults) renderResults(lastResults, true); // 다시 계산하지 않고 다시 그리기만
     });
 
     // ─── Copy Results ────────────────────────────────────────────
     document.getElementById('copyResultBtn').addEventListener('click', () => {
-      const saved = sessionStorage.getItem(RESULTS_SESSION_KEY);
-      if (!saved) { showToast('먼저 게임을 실행해주세요'); return; }
-      const data = JSON.parse(saved);
-      const text = data.map(d => `${d.name} → ${d.outcome}`).join('\n');
+      if (!lastResults) { showToast('먼저 게임을 실행해주세요'); return; }
+      const text = lastResults.map(d => `${d.name} → ${d.outcome}`).join('\n');
       navigator.clipboard.writeText(text).then(() => {
         showToast('결과가 복사됐습니다!', 'success');
       }).catch(() => {
@@ -969,6 +1055,7 @@
 
         card.querySelector('.card-input').addEventListener('input', e => {
           arr[i] = e.target.value;
+          clearResults();
           drawStaticLadder();
           updateCountStatus();
           saveNamesToSession();
@@ -981,6 +1068,7 @@
           if (arr.length <= MIN_COUNT) { showToast(`최소 ${MIN_COUNT}개 필요합니다`); return; }
           arr.splice(i, 1);
           if (type === 'player') { syncOutcomes(); generateLadder(); }
+          clearResults();
           renderCards();
           drawStaticLadder();
         });
@@ -1009,6 +1097,7 @@
           const [moved] = arr.splice(dragSrcIndex, 1);
           arr.splice(i, 0, moved);
           // Note: reorder doesn't regenerate ladder, only redraws labels
+          clearResults();
           renderCards();
           drawStaticLadder();
         });
@@ -1018,7 +1107,7 @@
     }
 
     function escHtml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
     // ─── Status ──────────────────────────────────────────────────
@@ -1057,6 +1146,7 @@
       resizeArr(players,  n, i => `참가자 ${i + 1}`);
       resizeArr(outcomes, n, i => `${i + 1}번`);
       generateLadder();
+      clearResults();
       renderCards();
       drawStaticLadder();
     }
@@ -1164,6 +1254,7 @@
       players.push(`참가자 ${players.length + 1}`);
       syncOutcomes();
       generateLadder();
+      clearResults();
       renderCards();
       drawStaticLadder();
       showToast('참가자 추가됨', 'success');
@@ -1172,6 +1263,7 @@
     document.getElementById('addOutcomeBtn').addEventListener('click', () => {
       if (outcomes.length >= MAX_COUNT) return showToast('최대 10개');
       outcomes.push(`${outcomes.length + 1}번`);
+      clearResults();
       renderCards();
       drawStaticLadder();
       showToast('순서 추가됨', 'success');
@@ -1181,6 +1273,7 @@
       autoSync = e.target.checked;
       try { localStorage.setItem(SYNC_KEY, autoSync ? 'on' : 'off'); } catch (err) {}
       syncOutcomes();
+      clearResults();
       renderCards();
       drawStaticLadder();
       showToast(autoSync ? '발표순서를 참가자 수에 맞춥니다' : '발표순서를 직접 조절합니다', 'success');
@@ -1225,10 +1318,8 @@
       cancelAnimationFrame(animationId);
       players  = list.slice();
       outcomes = list.map((_, i) => `${i + 1}번`);
-      lastPaths = null;
-      revealMode = false;
-      sessionStorage.removeItem(RESULTS_SESSION_KEY);
-      document.getElementById('resultsSection').style.display = 'none';
+      setRevealMode(false);
+      clearResults();
       getAllBtns().forEach(b => b.disabled = false);
 
       generateLadder();
@@ -1249,24 +1340,18 @@
       if (pns.length !== ons.length) {
         showToast(`참가자 ${pns.length}명 ≠ 순서 ${ons.length}개`); return;
       }
-      animatePaths(getPlayerPaths());
+      animateGame();
     });
 
     document.getElementById('resetGameBtn').addEventListener('click', () => {
       cancelAnimationFrame(animationId);
       players  = ['김민준', '이서연', '박지호', '최예은', '정승우'];
       outcomes = ['1번', '2번', '3번', '4번', '5번'];
-      lastPaths = null;
-      revealMode = false;
-      sessionStorage.removeItem(RESULTS_SESSION_KEY);
-      const revealBtn = document.getElementById('revealModeBtn');
-      revealBtn.textContent = '🙈 순차 공개';
-      revealBtn.style.color = '';
-      revealBtn.style.borderColor = '';
+      setRevealMode(false);
+      clearResults();
       generateLadder();
       renderCards();
       drawStaticLadder();
-      document.getElementById('resultsSection').style.display = 'none';
     });
 
     // ─── Theme Toggle ────────────────────────────────────────────
@@ -1307,24 +1392,40 @@
       if (savedNames) {
         try {
           const parsed = JSON.parse(savedNames);
-          if (Array.isArray(parsed.players) && Array.isArray(parsed.outcomes)
-              && parsed.players.length >= MIN_COUNT && parsed.players.length <= MAX_COUNT) {
+          const isStrList = a => Array.isArray(a) && a.every(s => typeof s === 'string');
+          if (isStrList(parsed.players) && isStrList(parsed.outcomes)
+              && parsed.players.length >= MIN_COUNT && parsed.players.length <= MAX_COUNT
+              && parsed.outcomes.length <= MAX_COUNT) {
             players  = parsed.players;
             outcomes = parsed.outcomes;
           }
         } catch (e) {}
       }
-      generateLadder();
+      syncOutcomes();
+      // 새로고침이면 같은 사다리를 되살려 결과와 어긋나지 않게 한다
+      const restored = restoreLadder();
+      if (!restored) generateLadder();
       renderCards();
       document.fonts.ready.then(() => {
         drawStaticLadder();
-        const saved = sessionStorage.getItem(RESULTS_SESSION_KEY);
-        if (saved) renderResults(JSON.parse(saved), false);
+        if (!restored) { clearResults(); return; }
+        try {
+          const saved = JSON.parse(sessionStorage.getItem(RESULTS_SESSION_KEY));
+          if (Array.isArray(saved) && saved.length === players.length) {
+            lastResults = saved;
+            renderResults(saved, false);
+          }
+        } catch (e) {}
       });
     });
 
     window.addEventListener('resize', () => {
       resizeCanvas();
+      // 진행 중이면 공을 새 크기의 경로 위 같은 지점으로 옮긴다
+      if (anim) {
+        anim.paths = getPlayerPaths();
+        anim.pos = anim.paths.map((p, i) => ({ ...p[anim.idx[i]] }));
+      }
       drawStaticLadder();
     });
   </script>
