@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>발표자 뽑기 룰렛</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/picker.css">
+</head>
+<body>
+  <div class="page-wrapper">
+    <div class="top-bar">
+      <a href="index.html" class="back-btn">← 게임 허브</a>
+      <button class="theme-toggle" id="themeToggle" type="button">
+        <span class="toggle-icon">🌙</span>
+        <span class="toggle-label">라이트 모드</span>
+      </button>
+    </div>
+
+    <div class="header">
+      <h1>발표자 뽑기 룰렛</h1>
+      <p>룰렛을 돌려 오늘의 발표자를 공정하게 뽑아요. 스페이스·Enter로 돌릴 수 있어요.</p>
+    </div>
+
+    <!-- 1) 준비: 명단 -->
+    <section class="setup" id="setupSection">
+      <div class="setup-bar">
+        <div class="count-picker" id="countPicker">
+          <span class="setup-label">인원수</span>
+        </div>
+        <button class="pill-btn" id="rosterToggle" type="button">📋 명단 붙여넣기</button>
+      </div>
+
+      <div class="roster-box" id="rosterBox" hidden>
+        <textarea id="rosterInput" placeholder="명단을 그대로 붙여넣으세요&#10;예) 1. 김민준 (3반) 010-1234-5678&#10;    2. 이서연 / 학생&#10;한 줄로: 김민준, 이서연, 박지호"></textarea>
+        <div class="roster-actions">
+          <span class="roster-hint" id="rosterHint">번호·부서·직급·연락처는 걸러내고 이름만 뽑습니다</span>
+          <button class="btn-icon" id="rosterClearBtn" type="button">지우기</button>
+          <button class="btn-icon roster-apply" id="rosterApplyBtn" type="button">명단 적용</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          명단
+          <span class="panel-badge" id="playerBadge">0</span>
+        </div>
+        <ol class="player-grid" id="playerGrid"></ol>
+        <button class="panel-add-btn" id="addPlayerBtn" type="button">＋ 이름 추가</button>
+      </div>
+
+      <div class="control-bar">
+        <button class="btn btn-primary" id="startBtn" type="button">🎡 룰렛 준비</button>
+      </div>
+      <p class="setup-tip" id="setupTip">명단은 이 기기에 저장돼요. 프로젝터에 띄워 함께 보세요.</p>
+    </section>
+
+    <!-- 2) 진행: 룰렛 -->
+    <div class="play-layout" id="playSection" hidden>
+      <main class="stage">
+        <div class="wheel-wrap" id="wheelWrap">
+          <div class="wheel-pointer" aria-hidden="true"></div>
+          <canvas id="wheel" class="wheel" role="img" aria-label="발표자 룰렛 — 눌러서 돌리기"></canvas>
+          <button class="wheel-hub" id="hubBtn" type="button" aria-label="룰렛 돌리기">GO</button>
+        </div>
+        <div class="stage-status" id="stageStatus" aria-live="polite"></div>
+        <div class="stage-actions" id="spinActions">
+          <button class="btn btn-primary btn-big" id="spinBtn" type="button">🎡 돌리기</button>
+        </div>
+        <div class="all-done" id="allDone" hidden>
+          <div class="all-done-title">🎉 모두 한 번씩 뽑혔어요!</div>
+          <div class="all-done-text">한 바퀴 더 돌릴까요, 기록을 지우고 처음부터 할까요?</div>
+          <div class="stage-actions">
+            <button class="btn btn-primary" id="newCycleBtn" type="button">🔁 한 바퀴 더 (기록 유지)</button>
+            <button class="btn btn-secondary" id="resetAllBtn" type="button">🗑 기록 지우고 처음부터</button>
+          </div>
+        </div>
+      </main>
+
+      <aside class="side">
+        <div class="panel">
+          <div class="panel-header">설정</div>
+          <label class="opt-row">
+            <input type="checkbox" id="removePickedChk" checked>
+            <span>뽑힌 사람 빼기</span>
+          </label>
+          <div class="opt-row opt-multi">
+            <span>한 번에</span>
+            <div class="multi-chips" id="multiChips"></div>
+          </div>
+          <label class="opt-row">
+            <input type="checkbox" id="soundChk" checked>
+            <span>효과음</span>
+          </label>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            출석 <span class="panel-badge" id="remainBadge">0</span>
+          </div>
+          <p class="side-tip">이름을 누르면 결석(제외) ↔ 출석</p>
+          <ul class="att-list" id="attList"></ul>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            뽑힌 순서 <span class="panel-badge" id="historyBadge">0</span>
+          </div>
+          <ol class="history-list" id="historyList"></ol>
+          <p class="side-tip" id="historyEmpty">아직 아무도 뽑히지 않았어요</p>
+          <div class="side-actions">
+            <button class="btn-icon" id="undoBtn" type="button">↶ 되돌리기</button>
+            <button class="btn-icon" id="clearHistoryBtn" type="button">🗑 기록 지우기</button>
+            <button class="btn-icon" id="editRosterBtn" type="button">⚙️ 명단 바꾸기</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 결과 -->
+  <div class="result-overlay" id="resultOverlay" hidden>
+    <div class="confetti" id="confetti" aria-hidden="true"></div>
+    <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="resultLabel">
+      <div class="result-label" id="resultLabel">🎉 발표자</div>
+      <ul class="result-names" id="resultNames"></ul>
+      <div class="result-hint">아무 곳이나 누르거나 스페이스를 눌러 닫기</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/roster.js"></script>
+  <script src="js/picker.js"></script>
+</body>
+</html>

@@ -354,10 +354,20 @@ body {
     background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
 }
 
+.game-icon.picker-game {
+    background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+}
+
+.game-icon.team-shuffle-game {
+    background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+}
+
 .game-icon.orbit-hop-game,
 .game-icon.block-duel-game,
 .game-icon.memory-pad-game,
-.game-icon.two-truths-game {
+.game-icon.two-truths-game,
+.game-icon.picker-game,
+.game-icon.team-shuffle-game {
     display: flex;
     align-items: center;
     justify-content: center;

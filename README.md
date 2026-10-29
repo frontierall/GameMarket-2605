@@ -15,6 +15,8 @@
 | 사다리 게임 | `ladder.html` | 모임용 추첨 | 탭 |
 | 칭찬 주고받기 | `praiseplay.html` | 소셜 카드 | 탭 |
 | 둘은 진실 | `two-truths.html` | 수업·모임용 투표 | 탭 |
+| 발표자 뽑기 룰렛 | `picker.html` | 수업용 추첨 | 탭 |
+| 팀 셔플러 | `team-shuffle.html` | 수업용 조 편성 | 탭 |
 
 ## 공통 규칙
 
