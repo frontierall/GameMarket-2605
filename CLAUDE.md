@@ -4,111 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a vanilla JavaScript web game project built with HTML, CSS, and JavaScript. The game features a player-controlled character that must avoid enemies and collect items to increase score.
+A collection of vanilla HTML/CSS/JavaScript browser games and classroom tools, with no build step. `index.html` is the hub page that links to every game via a card. UI text is Korean.
 
 ## Project Structure
 
 ```
 /
-├── index.html          # Main HTML file with game UI structure
-├── css/
-│   └── styles.css      # All game styling and animations
-├── js/
-│   └── game.js         # Core game logic and state management
-└── assets/             # Directory for images, sounds, or other assets
+├── index.html              # Hub: one .game-card per game
+├── css/hub.css             # Hub styles, incl. per-game .game-icon.<name>-game backgrounds
+├── js/roster.js            # Shared roster module (window.Roster), used by party/classroom tools
+│
+├── ball-game.html          # 공 피하기 — js/game.js, css/ball-game.css (DOM entities + AABB)
+├── tetris.html             # 테트리스 — js/tetris.js (TetrisGame class), css/tetris.css
+├── block-duel.html         # 낙하 블록 듀얼 — js/block-duel.js, reuses TetrisGame from js/tetris.js
+├── neon-breaker.html       # 네온 벽돌깨기 — neon-breaker.js / neon-breaker.css (at repo root)
+├── orbit-hop.html          # 궤도 점프 — js/orbit-hop.js, css/orbit-hop.css (canvas)
+├── memory-pad.html         # 기억 패드 — js/memory-pad.js, css/memory-pad.css
+├── ladder.html             # 사다리 게임 — single file with inline CSS/JS, uses js/roster.js
+├── praiseplay.html         # 칭찬 주고받기 — single file with inline CSS/JS
+├── two-truths.html         # 둘은 진실 — js/two-truths.js, css/two-truths.css, uses js/roster.js
+├── picker.html             # 발표자 뽑기 룰렛 — js/picker.js, css/picker.css, uses js/roster.js
+├── team-shuffle.html       # 팀 셔플러 — js/team-shuffle.js, css/team-shuffle.css, uses js/roster.js
+│
+├── README.md               # Game list (keep in sync when adding a game)
+├── release_note.md/.html   # Change log; md is the source, html is regenerated from it
+└── 작업기록.md/.html        # Auto-written by a commit hook — do not edit by hand
 ```
 
-## Architecture
+## Conventions
 
-### Game State Management (js/game.js)
-- **gameState object**: Central state container holding all game data
-  - `isRunning`, `isPaused`: Game status flags
-  - `score`, `highScore`: Score tracking (highScore persisted in localStorage)
-  - `player`, `enemies`, `collectibles`: Game entity arrays
-  - `keys`: Keyboard input tracking object
+- **New game files**: `<name>.html` at the root, script in `js/<name>.js`, styles in `css/<name>.css`. Older games (neon-breaker, ladder, praiseplay) predate this and keep their own layout.
+- **Adding a game**: create the files, then add a `.game-card` to `index.html` and a `.game-icon.<name>-game` rule to `css/hub.css`, and add a row to the README game list.
+- **Back link**: every game page has a link back to `index.html`.
+- **localStorage keys**: prefix with `gm_<name>_` — e.g. `gm_<name>_best` for the high score, `gm_<name>_names` for a saved roster, `gm_<name>_theme`. In-progress state for classroom tools goes in `sessionStorage` (`gm_<name>_state`). Exceptions kept for compatibility: ladder (`ladderNamesPersist`) and neon-breaker (its own high-score list key).
+- **Input**: use pointer events (`pointerdown`/`pointermove`) so mouse and touch both work, and set `touch-action: none` on play areas. Keyboard shortcuts stay as an addition. block-duel is keyboard-only by design (two players on one keyboard).
+- **User-entered names**: insert with `textContent` (or escape) — never raw `innerHTML`.
+- **No ES modules**: scripts are loaded with plain `<script src>` so pages work from `file://`. Shared code exposes a global (e.g. `window.Roster`).
 
-### Game Loop Pattern
-- Uses `requestAnimationFrame()` for smooth 60fps rendering
-- Main loop in `gameLoop()` function calls update functions sequentially
-- Intervals for spawning enemies (2000ms) and collectibles (3000ms)
+## Shared Roster Module (js/roster.js)
 
-### Entity System
-- All game objects (player, enemies, collectibles) follow the same structure:
-  ```javascript
-  {
-    element: DOMElement,  // The actual div rendered on screen
-    x: number,            // X position
-    y: number,            // Y position
-    width: number,        // Hitbox width
-    height: number        // Hitbox height
-  }
-  ```
+`window.Roster` provides roster parsing and UI wiring for party/classroom tools:
+- `parse(text)` / `extractName(raw)` — parse pasted lists (comma, newline, tab/Excel, space-separated Korean names, numbered lists)
+- `clamp`, `resize(arr, n, fill)` — helpers
+- `load(key)` / `save(key, names)` — localStorage, fail-safe
+- `countPicker(container, { min, max, onPick, unit })` — headcount chips, returns `{ update(n) }`
+- `pasteBox({ input, hint, applyBtn, clearBtn, toggleBtn, box, max, onApply, defaultHint })` — wires an existing paste box
 
-### Collision Detection
-- AABB (Axis-Aligned Bounding Box) collision detection in `checkCollision()`
-- Called for player vs enemies (game over) and player vs collectibles (score)
+Changes here affect ladder, two-truths, picker and team-shuffle; re-check all four.
 
-### Input Handling
-- Supports both arrow keys and WASD for movement
-- Spacebar for pause/resume
-- Keyboard state tracked in `gameState.keys` object
+## Game Notes
+
+- **공 피하기 (js/game.js)**: `gameState` holds entities `{ element, x, y, width, height }`; `requestAnimationFrame` loop; AABB `checkCollision()`. Difficulty lives in the `config` object (`playerSpeed`, `enemySpeed`, `enemySpawnRate`, `collectibleSpawnRate`). High score key `gm_ball-game_best` (migrated once from the old `highScore` key).
+- **테트리스 (js/tetris.js)**: `TetrisGame` takes constructor options (DOM `ids`, `keyMap`, `bestKey`, `touch`, callbacks `onLinesCleared`/`onGameOver`, garbage-line methods). With no options it behaves as the standalone page; block-duel creates two instances. Keep the standalone page working when changing it.
+- **팀 셔플러**: placement logic is DOM-free (`TeamShuffleLogic`) and can be `require()`d in node for testing.
 
 ## Development
 
-### Running the Game
-Simply open `index.html` in a web browser. No build process or server required.
+Open `index.html` in a browser — no build or server required. For a local server:
 
-For development with live reload, use any local server:
 ```bash
-# Python 3
-python -m http.server 8000
-
-# Node.js (with http-server)
-npx http-server
-
-# VS Code Live Server extension
-# Right-click index.html > "Open with Live Server"
+python3 -m http.server 8000
 ```
 
-### Modifying Game Behavior
-
-**Adjust difficulty**: Edit `config` object in js/game.js:
-- `playerSpeed`: Player movement speed (default: 5)
-- `enemySpeed`: Enemy chase speed (default: 2)
-- `enemySpawnRate`: Milliseconds between enemy spawns (default: 2000)
-- `collectibleSpawnRate`: Milliseconds between collectible spawns (default: 3000)
-
-**Change styling**: All visual styles are in css/styles.css
-- Color gradients use CSS linear-gradient
-- Game objects use absolute positioning within `.game-canvas`
-- Responsive breakpoint at 600px for mobile devices
-
-**Add new entity types**: Follow the pattern in `createEnemy()` or `createCollectible()`
-1. Create DOM element with appropriate class
-2. Position it on canvas
-3. Return object with element, x, y, width, height
-4. Add to appropriate gameState array
-5. Update in game loop
-
-### State Persistence
-- High score is saved to `localStorage` with key `'highScore'`
-- Cleared only when user clears browser data
-
-## File Relationships
-
-- `index.html` references `css/styles.css` and `js/game.js`
-- `game.js` queries DOM elements by ID from `index.html`
-- CSS classes in `styles.css` are applied to elements created in `game.js`
-- The `assets/` directory is for future expansion (images, audio, etc.)
-
-## Key Functions Reference
-
-| Function | Location | Purpose |
-|----------|----------|---------|
-| `init()` | js/game.js:40 | Initialize game on page load |
-| `startGame()` | js/game.js:180 | Start/restart game, create player, start spawning |
-| `gameLoop()` | js/game.js:165 | Main game loop, called every frame |
-| `updatePlayer()` | js/game.js:97 | Handle keyboard input and player movement |
-| `updateEnemies()` | js/game.js:121 | Move enemies toward player, check collisions |
-| `checkCollision()` | js/game.js:155 | AABB collision detection between two objects |
-| `gameOver()` | js/game.js:208 | End game, update high score, show game over screen |
+Check script syntax with `node --check js/<name>.js`.
